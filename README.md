@@ -73,7 +73,14 @@ recent workouts, and the endpoint list in one JSON response. The current day can
 be partial, so health planning agents should prefer `latestCompleteDay` for daily
 conclusions.
 
-OpenClaw skill installed locally:
+OpenClaw skill is packaged in this repository at `skills/health-data-bridge`.
+Install or refresh it into `~/.openclaw` with:
+
+```sh
+./scripts/install_openclaw_skill.sh
+```
+
+After installation, OpenClaw can use:
 
 ```sh
 python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py context --days 14
