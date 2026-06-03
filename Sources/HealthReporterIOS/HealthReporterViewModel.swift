@@ -37,7 +37,7 @@ final class HealthReporterViewModel: ObservableObject {
     @Published private(set) var syncBadgeText = "未同步"
 
     private let service = HealthReporterService.shared
-    private let workoutChartDays = 42
+    private let workoutChartDays = 50
     private static let workoutDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)

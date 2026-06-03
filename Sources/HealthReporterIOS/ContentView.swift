@@ -128,7 +128,7 @@ private struct CaloriesHeroCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("最近 6 周总消耗")
+                    Text("最近 50 天总消耗")
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.90))
@@ -138,7 +138,7 @@ private struct CaloriesHeroCard: View {
                         .font(.system(size: 46, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.78)
-                    Text("日均 \(dailyAverageText) · 42 天热力图")
+                    Text("日均 \(dailyAverageText) · 50 天热力图")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.78))
                 }
@@ -215,7 +215,7 @@ private struct WorkoutChartCard: View {
                     }
                 )
             } else {
-                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 6 周没有 workout 卡路里")
+                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 50 天没有 workout 卡路里")
                     .frame(height: 132)
             }
         }
@@ -230,7 +230,7 @@ private struct WorkoutHeatmapGrid: View {
     let maxKilocalories: Double
     let onSelect: (WorkoutCaloriesPoint) -> Void
 
-    private let columns = Array(repeating: GridItem(.flexible(minimum: 14, maximum: 18), spacing: 5), count: 14)
+    private let columns = Array(repeating: GridItem(.flexible(minimum: 20, maximum: 28), spacing: 5), count: 10)
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
