@@ -230,28 +230,35 @@ private struct WorkoutHeatmapGrid: View {
     let maxKilocalories: Double
     let onSelect: (WorkoutCaloriesPoint) -> Void
 
-    private let columns = Array(repeating: GridItem(.flexible(minimum: 20, maximum: 28), spacing: 5), count: 10)
+    private let rowCount = 5
+    private let cellSpacing: CGFloat = 5
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            LazyVGrid(columns: columns, alignment: .leading, spacing: 5) {
-                ForEach(points) { point in
-                    Button {
-                        onSelect(point)
-                    } label: {
-                        RoundedRectangle(cornerRadius: 4, style: .continuous)
-                            .fill(color(for: point))
-                            .overlay {
-                                if point.id == selectedDayID {
-                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                        .stroke(.white.opacity(0.78), lineWidth: 1.5)
-                                }
+            HStack(alignment: .top, spacing: cellSpacing) {
+                ForEach(Array(pointColumns.enumerated()), id: \.offset) { _, column in
+                    VStack(spacing: cellSpacing) {
+                        ForEach(column) { point in
+                            Button {
+                                onSelect(point)
+                            } label: {
+                                RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                    .fill(color(for: point))
+                                    .overlay {
+                                        if point.id == selectedDayID {
+                                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                                .stroke(.white.opacity(0.78), lineWidth: 1.5)
+                                        }
+                                    }
+                                    .aspectRatio(1, contentMode: .fit)
+                                    .frame(maxWidth: .infinity)
+                                    .contentShape(Rectangle())
                             }
-                            .aspectRatio(1, contentMode: .fit)
-                            .contentShape(Rectangle())
+                            .buttonStyle(.plain)
+                            .accessibilityLabel(accessibilityLabel(for: point))
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel(accessibilityLabel(for: point))
+                    .frame(maxWidth: .infinity, alignment: .top)
                 }
             }
 
@@ -276,6 +283,13 @@ private struct WorkoutHeatmapGrid: View {
             }
         }
         .padding(.top, 4)
+    }
+
+    private var pointColumns: [[WorkoutCaloriesPoint]] {
+        stride(from: 0, to: points.count, by: rowCount).map { startIndex in
+            let endIndex = min(startIndex + rowCount, points.count)
+            return Array(points[startIndex..<endIndex])
+        }
     }
 
     private func color(for point: WorkoutCaloriesPoint) -> Color {
