@@ -37,7 +37,7 @@ final class HealthReporterViewModel: ObservableObject {
     @Published private(set) var syncBadgeText = "未同步"
 
     private let service = HealthReporterService.shared
-    private let workoutChartDays = 30
+    private let workoutChartDays = 42
     private static let workoutDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -58,6 +58,10 @@ final class HealthReporterViewModel: ObservableObject {
 
     var hasWorkoutCalories: Bool {
         workoutCalories.contains { $0.kilocalories > 0 }
+    }
+
+    var workoutHeatmapMaxKilocalories: Double {
+        workoutCalories.map(\.kilocalories).max() ?? 0
     }
 
     func load() async {
@@ -127,7 +131,8 @@ final class HealthReporterViewModel: ObservableObject {
             let total = points.reduce(0) { $0 + $1.kilocalories }
             let activeDays = points.filter { $0.kilocalories > 0 }.count
             let latestWorkout = workouts.max { $0.startDate < $1.startDate }
-            let highlightedPoint = points.filter { $0.kilocalories > 0 }.max { $0.date < $1.date }
+            let highlightedPoint = points.first { $0.id == workoutHighlightedDayID }
+                ?? points.filter { $0.kilocalories > 0 }.max { $0.date < $1.date }
 
             workoutCalories = points
             workoutChartMessage = total > 0 ? nil : "最近 \(workoutChartDays) 天没有可展示的 workout 卡路里"
@@ -135,9 +140,7 @@ final class HealthReporterViewModel: ObservableObject {
             workoutCountText = "\(workouts.count) 次"
             workoutActiveDaysText = "\(activeDays) 天"
             workoutDailyAverageText = formatCalories(total / Double(workoutChartDays))
-            workoutSelectedCaloriesText = highlightedPoint.map { formatCalories($0.kilocalories) } ?? "0 kcal"
-            workoutSelectedDayText = highlightedPoint.map { "\(Self.workoutDayFormatter.string(from: $0.date)) · 最近训练日" } ?? "暂无训练日"
-            workoutHighlightedDayID = highlightedPoint?.id
+            updateSelectedWorkoutPoint(highlightedPoint, reason: highlightedPoint?.kilocalories ?? 0 > 0 ? "最近训练日" : "已选择")
             workoutChartAverageKilocalories = activeDays > 0 ? total / Double(activeDays) : 0
             recentWorkoutRows = makeRecentWorkoutRows(from: workouts)
             latestWorkoutText = latestWorkout.map(formatLatestWorkout) ?? "暂无"
@@ -155,6 +158,10 @@ final class HealthReporterViewModel: ObservableObject {
             recentWorkoutRows = []
             latestWorkoutText = "暂无"
         }
+    }
+
+    func selectWorkoutDay(_ point: WorkoutCaloriesPoint) {
+        updateSelectedWorkoutPoint(point, reason: point.kilocalories > 0 ? "已选择" : "无 workout")
     }
 
     private func updateStatusText() {
@@ -210,6 +217,19 @@ final class HealthReporterViewModel: ObservableObject {
         return "\(activity) · \(calories) · \(time)"
     }
 
+    private func updateSelectedWorkoutPoint(_ point: WorkoutCaloriesPoint?, reason: String) {
+        guard let point else {
+            workoutSelectedCaloriesText = "0 kcal"
+            workoutSelectedDayText = "暂无训练日"
+            workoutHighlightedDayID = nil
+            return
+        }
+
+        workoutSelectedCaloriesText = formatCalories(point.kilocalories)
+        workoutSelectedDayText = "\(Self.workoutDayFormatter.string(from: point.date)) · \(reason)"
+        workoutHighlightedDayID = point.id
+    }
+
     private func makeRecentWorkoutRows(from workouts: [HealthWorkout]) -> [RecentWorkoutRow] {
         workouts
             .sorted { $0.startDate > $1.startDate }
@@ -263,6 +283,10 @@ final class HealthReporterViewModel: ObservableObject {
     }
 
     private func formatCalories(_ value: Double) -> String {
+        if value < 1 {
+            return "0 kcal"
+        }
+
         if value >= 100 {
             return "\(Int(value.rounded())) kcal"
         }

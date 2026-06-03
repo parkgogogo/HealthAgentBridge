@@ -1,4 +1,3 @@
-import Charts
 import SwiftUI
 
 private enum DataTrackerStyle {
@@ -129,7 +128,7 @@ private struct CaloriesHeroCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("30 天总消耗")
+                    Text("最近 6 周总消耗")
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.90))
@@ -139,7 +138,7 @@ private struct CaloriesHeroCard: View {
                         .font(.system(size: 46, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.78)
-                    Text("日均 \(dailyAverageText) · 来自 Apple Watch")
+                    Text("日均 \(dailyAverageText) · 42 天热力图")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.78))
                 }
@@ -207,57 +206,123 @@ private struct WorkoutChartCard: View {
             }
 
             if viewModel.hasWorkoutCalories {
-                Chart {
-                    ForEach(viewModel.workoutCalories) { point in
-                        BarMark(
-                            x: .value("日期", point.date, unit: .day),
-                            y: .value("卡路里", point.kilocalories),
-                            width: .fixed(8)
-                        )
-                        .cornerRadius(6)
-                        .foregroundStyle(
-                            point.id == viewModel.workoutHighlightedDayID
-                                ? DataTrackerStyle.orange
-                                : DataTrackerStyle.orangeMuted.opacity(0.78)
-                        )
+                WorkoutHeatmapGrid(
+                    points: viewModel.workoutCalories,
+                    selectedDayID: viewModel.workoutHighlightedDayID,
+                    maxKilocalories: viewModel.workoutHeatmapMaxKilocalories,
+                    onSelect: { point in
+                        viewModel.selectWorkoutDay(point)
                     }
-
-                    if viewModel.workoutChartAverageKilocalories > 0 {
-                        RuleMark(y: .value("活跃日均", viewModel.workoutChartAverageKilocalories))
-                            .foregroundStyle(.white.opacity(0.28))
-                            .lineStyle(StrokeStyle(lineWidth: 1, dash: [4, 5]))
-                    }
-                }
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 5)) {
-                        AxisGridLine()
-                            .foregroundStyle(.white.opacity(0.06))
-                        AxisTick()
-                            .foregroundStyle(.clear)
-                        AxisValueLabel()
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(DataTrackerStyle.textMuted)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(position: .leading, values: .automatic(desiredCount: 4)) {
-                        AxisGridLine()
-                            .foregroundStyle(.white.opacity(0.08))
-                        AxisTick()
-                            .foregroundStyle(.clear)
-                        AxisValueLabel()
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(DataTrackerStyle.textMuted)
-                    }
-                }
-                .frame(height: 208)
+                )
             } else {
-                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 30 天没有 workout 卡路里")
-                    .frame(height: 208)
+                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 6 周没有 workout 卡路里")
+                    .frame(height: 132)
             }
         }
         .padding(20)
         .background(DataTrackerStyle.card, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+}
+
+private struct WorkoutHeatmapGrid: View {
+    let points: [WorkoutCaloriesPoint]
+    let selectedDayID: String?
+    let maxKilocalories: Double
+    let onSelect: (WorkoutCaloriesPoint) -> Void
+
+    private let columns = Array(repeating: GridItem(.flexible(minimum: 14, maximum: 18), spacing: 5), count: 14)
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            LazyVGrid(columns: columns, alignment: .leading, spacing: 5) {
+                ForEach(points) { point in
+                    Button {
+                        onSelect(point)
+                    } label: {
+                        RoundedRectangle(cornerRadius: 4, style: .continuous)
+                            .fill(color(for: point))
+                            .overlay {
+                                if point.id == selectedDayID {
+                                    RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                        .stroke(.white.opacity(0.78), lineWidth: 1.5)
+                                }
+                            }
+                            .frame(height: 16)
+                            .contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(accessibilityLabel(for: point))
+                }
+            }
+
+            HStack(spacing: 7) {
+                Text("低")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(DataTrackerStyle.textMuted)
+                ForEach(0..<5, id: \.self) { index in
+                    RoundedRectangle(cornerRadius: 3, style: .continuous)
+                        .fill(legendColor(index))
+                        .frame(width: 13, height: 13)
+                }
+                Text("高")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(DataTrackerStyle.textMuted)
+
+                Spacer()
+
+                Text("点按格子查看当天数据")
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(DataTrackerStyle.textMuted)
+            }
+        }
+        .padding(.top, 4)
+    }
+
+    private func color(for point: WorkoutCaloriesPoint) -> Color {
+        guard point.kilocalories > 0 else {
+            return DataTrackerStyle.cardMuted.opacity(0.62)
+        }
+
+        if point.id == selectedDayID {
+            return DataTrackerStyle.orange
+        }
+
+        return heatColor(intensity(for: point.kilocalories))
+    }
+
+    private func legendColor(_ index: Int) -> Color {
+        if index == 0 {
+            return DataTrackerStyle.cardMuted.opacity(0.62)
+        }
+
+        return heatColor(Double(index) / 4)
+    }
+
+    private func heatColor(_ intensity: Double) -> Color {
+        switch intensity {
+        case ..<0.26:
+            return Color(red: 0.35, green: 0.18, blue: 0.10)
+        case ..<0.51:
+            return Color(red: 0.55, green: 0.25, blue: 0.11)
+        case ..<0.76:
+            return Color(red: 0.76, green: 0.30, blue: 0.10)
+        default:
+            return DataTrackerStyle.orange
+        }
+    }
+
+    private func intensity(for kilocalories: Double) -> Double {
+        guard maxKilocalories > 0 else {
+            return 0
+        }
+
+        return min(1, max(0.12, kilocalories / maxKilocalories))
+    }
+
+    private func accessibilityLabel(for point: WorkoutCaloriesPoint) -> String {
+        let dateText = DateFormatter.healthBridgeDay.string(from: point.date)
+        let calories = Int(point.kilocalories.rounded())
+        return "\(dateText), \(calories) kcal"
     }
 }
 
