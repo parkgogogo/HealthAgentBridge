@@ -34,6 +34,8 @@
 	</array>
 	<key>NSHealthShareUsageDescription</key>
 	<string>用于读取你的健康数据，并上报到你自己的 Mac 本地健康桥接服务。</string>
+	<key>NSHealthUpdateUsageDescription</key>
+	<string>用于把你通过本地 Agent 记录的体重和饮食数据写入 Apple Health。</string>
 	<key>NSLocalNetworkUsageDescription</key>
 	<string>用于在本地网络中发现并连接你的 Mac 健康桥接服务。</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
