@@ -1,0 +1,532 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		A0000000000000000000B001 /* HealthBridgeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000030 /* HealthBridgeModels.swift */; };
+		A0000000000000000000B002 /* HealthBridgeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000030 /* HealthBridgeModels.swift */; };
+		A0000000000000000000B003 /* HealthReporterApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000033 /* HealthReporterApp.swift */; };
+		A0000000000000000000B004 /* HealthReporterAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000034 /* HealthReporterAppDelegate.swift */; };
+		A0000000000000000000B005 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000035 /* ContentView.swift */; };
+		A0000000000000000000B006 /* HealthReporterViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000036 /* HealthReporterViewModel.swift */; };
+		A0000000000000000000B007 /* BridgeClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000037 /* BridgeClient.swift */; };
+		A0000000000000000000B008 /* HealthReporterService.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000038 /* HealthReporterService.swift */; };
+		A0000000000000000000B011 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000039 /* Assets.xcassets */; };
+		A0000000000000000000B009 /* HealthBridgeMacApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000041 /* HealthBridgeMacApp.swift */; };
+		A0000000000000000000B00A /* MacContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000042 /* MacContentView.swift */; };
+		A0000000000000000000B00B /* BridgeController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000043 /* BridgeController.swift */; };
+		A0000000000000000000B00C /* BridgeStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000044 /* BridgeStore.swift */; };
+		A0000000000000000000B00D /* HealthBridgeHTTPServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = A00000000000000000000045 /* HealthBridgeHTTPServer.swift */; };
+		A0000000000000000000B00E /* HealthKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A00000000000000000000050 /* HealthKit.framework */; };
+		A0000000000000000000B00F /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A00000000000000000000051 /* Network.framework */; };
+		A0000000000000000000B010 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A00000000000000000000051 /* Network.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		A00000000000000000000012 /* HealthReporter.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthReporter.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000013 /* HealthBridgeMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = HealthBridgeMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A00000000000000000000030 /* HealthBridgeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthBridgeModels.swift; sourceTree = "<group>"; };
+		A00000000000000000000031 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000032 /* HealthReporter.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = HealthReporter.entitlements; sourceTree = "<group>"; };
+		A00000000000000000000033 /* HealthReporterApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReporterApp.swift; sourceTree = "<group>"; };
+		A00000000000000000000034 /* HealthReporterAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReporterAppDelegate.swift; sourceTree = "<group>"; };
+		A00000000000000000000035 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		A00000000000000000000036 /* HealthReporterViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReporterViewModel.swift; sourceTree = "<group>"; };
+		A00000000000000000000037 /* BridgeClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeClient.swift; sourceTree = "<group>"; };
+		A00000000000000000000038 /* HealthReporterService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthReporterService.swift; sourceTree = "<group>"; };
+		A00000000000000000000039 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A00000000000000000000040 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		A00000000000000000000041 /* HealthBridgeMacApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthBridgeMacApp.swift; sourceTree = "<group>"; };
+		A00000000000000000000042 /* MacContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MacContentView.swift; sourceTree = "<group>"; };
+		A00000000000000000000043 /* BridgeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeController.swift; sourceTree = "<group>"; };
+		A00000000000000000000044 /* BridgeStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BridgeStore.swift; sourceTree = "<group>"; };
+		A00000000000000000000045 /* HealthBridgeHTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HealthBridgeHTTPServer.swift; sourceTree = "<group>"; };
+		A00000000000000000000050 /* HealthKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = HealthKit.framework; path = System/Library/Frameworks/HealthKit.framework; sourceTree = SDKROOT; };
+		A00000000000000000000051 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		A00000000000000000000052 /* HealthBridge.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = HealthBridge.xcconfig; sourceTree = "<group>"; };
+		A00000000000000000000053 /* Local.example.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Local.example.xcconfig; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A00000000000000000000015 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000B00E /* HealthKit.framework in Frameworks */,
+				A0000000000000000000B00F /* Network.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000018 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000B010 /* Network.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		A00000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000009 /* Config */,
+				A00000000000000000000004 /* Sources */,
+				A00000000000000000000008 /* Frameworks */,
+				A00000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		A00000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000012 /* HealthReporter.app */,
+				A00000000000000000000013 /* HealthBridgeMac.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000004 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000005 /* Shared */,
+				A00000000000000000000006 /* HealthReporterIOS */,
+				A00000000000000000000007 /* HealthBridgeMac */,
+			);
+			path = Sources;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000005 /* Shared */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000030 /* HealthBridgeModels.swift */,
+			);
+			path = Shared;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000006 /* HealthReporterIOS */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000031 /* Info.plist */,
+				A00000000000000000000032 /* HealthReporter.entitlements */,
+				A00000000000000000000033 /* HealthReporterApp.swift */,
+				A00000000000000000000034 /* HealthReporterAppDelegate.swift */,
+				A00000000000000000000035 /* ContentView.swift */,
+				A00000000000000000000036 /* HealthReporterViewModel.swift */,
+				A00000000000000000000037 /* BridgeClient.swift */,
+				A00000000000000000000038 /* HealthReporterService.swift */,
+				A00000000000000000000039 /* Assets.xcassets */,
+			);
+			path = HealthReporterIOS;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000007 /* HealthBridgeMac */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000040 /* Info.plist */,
+				A00000000000000000000041 /* HealthBridgeMacApp.swift */,
+				A00000000000000000000042 /* MacContentView.swift */,
+				A00000000000000000000043 /* BridgeController.swift */,
+				A00000000000000000000044 /* BridgeStore.swift */,
+				A00000000000000000000045 /* HealthBridgeHTTPServer.swift */,
+			);
+			path = HealthBridgeMac;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000008 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000050 /* HealthKit.framework */,
+				A00000000000000000000051 /* Network.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		A00000000000000000000009 /* Config */ = {
+			isa = PBXGroup;
+			children = (
+				A00000000000000000000052 /* HealthBridge.xcconfig */,
+				A00000000000000000000053 /* Local.example.xcconfig */,
+			);
+			path = Config;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		A00000000000000000000010 /* HealthReporter */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000023 /* Build configuration list for PBXNativeTarget "HealthReporter" */;
+			buildPhases = (
+				A00000000000000000000014 /* Sources */,
+				A00000000000000000000015 /* Frameworks */,
+				A00000000000000000000016 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HealthReporter;
+			packageProductDependencies = (
+			);
+			productName = HealthReporter;
+			productReference = A00000000000000000000012 /* HealthReporter.app */;
+			productType = "com.apple.product-type.application";
+		};
+		A00000000000000000000011 /* HealthBridgeMac */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A00000000000000000000026 /* Build configuration list for PBXNativeTarget "HealthBridgeMac" */;
+			buildPhases = (
+				A00000000000000000000017 /* Sources */,
+				A00000000000000000000018 /* Frameworks */,
+				A00000000000000000000019 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = HealthBridgeMac;
+			packageProductDependencies = (
+			);
+			productName = HealthBridgeMac;
+			productReference = A00000000000000000000013 /* HealthBridgeMac.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		A00000000000000000000002 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2600;
+				LastUpgradeCheck = 2600;
+				TargetAttributes = {
+					A00000000000000000000010 = {
+						CreatedOnToolsVersion = 26.2;
+						ProvisioningStyle = Automatic;
+					};
+					A00000000000000000000011 = {
+						CreatedOnToolsVersion = 26.2;
+						ProvisioningStyle = Automatic;
+					};
+				};
+			};
+			buildConfigurationList = A00000000000000000000020 /* Build configuration list for PBXProject "HealthAgentBridge" */;
+			compatibilityVersion = "Xcode 16.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = A00000000000000000000001;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = A00000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				A00000000000000000000010 /* HealthReporter */,
+				A00000000000000000000011 /* HealthBridgeMac */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		A00000000000000000000016 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000B011 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000019 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		A00000000000000000000014 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000B001 /* HealthBridgeModels.swift in Sources */,
+				A0000000000000000000B003 /* HealthReporterApp.swift in Sources */,
+				A0000000000000000000B004 /* HealthReporterAppDelegate.swift in Sources */,
+				A0000000000000000000B005 /* ContentView.swift in Sources */,
+				A0000000000000000000B006 /* HealthReporterViewModel.swift in Sources */,
+				A0000000000000000000B007 /* BridgeClient.swift in Sources */,
+				A0000000000000000000B008 /* HealthReporterService.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		A00000000000000000000017 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				A0000000000000000000B002 /* HealthBridgeModels.swift in Sources */,
+				A0000000000000000000B009 /* HealthBridgeMacApp.swift in Sources */,
+				A0000000000000000000B00A /* MacContentView.swift in Sources */,
+				A0000000000000000000B00B /* BridgeController.swift in Sources */,
+				A0000000000000000000B00C /* BridgeStore.swift in Sources */,
+				A0000000000000000000B00D /* HealthBridgeHTTPServer.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		A00000000000000000000021 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		A00000000000000000000022 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		A00000000000000000000024 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/HealthReporterIOS/HealthReporter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(HEALTH_BRIDGE_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/HealthReporterIOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HEALTH_REPORTER_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		A00000000000000000000025 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/HealthReporterIOS/HealthReporter.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(HEALTH_BRIDGE_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/HealthReporterIOS/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HEALTH_REPORTER_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		A00000000000000000000027 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/HealthBridgeMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HEALTH_BRIDGE_MAC_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		A00000000000000000000028 /* Release */ = {
+			isa = XCBuildConfiguration;
+			baseConfigurationReference = A00000000000000000000052 /* HealthBridge.xcconfig */;
+			buildSettings = {
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = Sources/HealthBridgeMac/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(HEALTH_BRIDGE_MAC_BUNDLE_IDENTIFIER)";
+				PRODUCT_BUNDLE_PACKAGE_TYPE = APPL;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SUPPORTED_PLATFORMS = macosx;
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		A00000000000000000000020 /* Build configuration list for PBXProject "HealthAgentBridge" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000021 /* Debug */,
+				A00000000000000000000022 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000023 /* Build configuration list for PBXNativeTarget "HealthReporter" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000024 /* Debug */,
+				A00000000000000000000025 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		A00000000000000000000026 /* Build configuration list for PBXNativeTarget "HealthBridgeMac" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A00000000000000000000027 /* Debug */,
+				A00000000000000000000028 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = A00000000000000000000002 /* Project object */;
+}
