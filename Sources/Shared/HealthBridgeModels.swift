@@ -59,6 +59,18 @@ struct HealthSample: Codable, Identifiable, Hashable {
     var sourceName: String?
 }
 
+struct HealthWorkout: Codable, Identifiable, Hashable {
+    var id: UUID
+    var activityType: UInt
+    var activityName: String
+    var startDate: Date
+    var endDate: Date
+    var durationSeconds: Double
+    var totalEnergyBurnedKilocalories: Double?
+    var totalDistanceMeters: Double?
+    var sourceName: String?
+}
+
 struct HealthReportEnvelope: Codable, Hashable {
     var schemaVersion: Int
     var deviceName: String
@@ -66,6 +78,36 @@ struct HealthReportEnvelope: Codable, Hashable {
     var reason: String
     var dailySummaries: [DailyHealthSummary]
     var samples: [HealthSample]
+    var workouts: [HealthWorkout]
+
+    init(
+        schemaVersion: Int,
+        deviceName: String,
+        generatedAt: Date,
+        reason: String,
+        dailySummaries: [DailyHealthSummary],
+        samples: [HealthSample],
+        workouts: [HealthWorkout]
+    ) {
+        self.schemaVersion = schemaVersion
+        self.deviceName = deviceName
+        self.generatedAt = generatedAt
+        self.reason = reason
+        self.dailySummaries = dailySummaries
+        self.samples = samples
+        self.workouts = workouts
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try container.decode(Int.self, forKey: .schemaVersion)
+        deviceName = try container.decode(String.self, forKey: .deviceName)
+        generatedAt = try container.decode(Date.self, forKey: .generatedAt)
+        reason = try container.decode(String.self, forKey: .reason)
+        dailySummaries = try container.decode([DailyHealthSummary].self, forKey: .dailySummaries)
+        samples = try container.decode([HealthSample].self, forKey: .samples)
+        workouts = try container.decodeIfPresent([HealthWorkout].self, forKey: .workouts) ?? []
+    }
 }
 
 struct StoredHealthReport: Codable, Hashable {

@@ -193,6 +193,7 @@ final class HealthReporterService {
     private func collectReport(reason: String) async throws -> HealthReportEnvelope {
         async let summaries = collectDailySummaries(days: 14)
         async let samples = collectRecentSamples(hours: 24)
+        async let workouts = collectRecentWorkouts(days: 30, limit: 100)
 
         return try await HealthReportEnvelope(
             schemaVersion: HealthBridgeConstants.schemaVersion,
@@ -200,7 +201,8 @@ final class HealthReporterService {
             generatedAt: Date(),
             reason: reason,
             dailySummaries: summaries,
-            samples: samples
+            samples: samples,
+            workouts: workouts
         )
     }
 
@@ -226,6 +228,7 @@ final class HealthReporterService {
             throw HealthReporterError.unsupportedType(HKCategoryTypeIdentifier.sleepAnalysis.rawValue)
         }
         types.append(sleep)
+        types.append(HKObjectType.workoutType())
         return types
     }
 
@@ -398,6 +401,44 @@ final class HealthReporterService {
         return output.sorted { $0.startDate < $1.startDate }
     }
 
+    private func collectRecentWorkouts(days: Int, limit: Int) async throws -> [HealthWorkout] {
+        let endDate = Date()
+        guard let startDate = Calendar.current.date(byAdding: .day, value: -days, to: endDate) else {
+            return []
+        }
+
+        let workoutType = HKObjectType.workoutType()
+        let workouts: [HKWorkout] = try await sampleQuery(
+            sampleType: workoutType,
+            startDate: startDate,
+            endDate: endDate,
+            limit: limit
+        )
+
+        return workouts.map { workout in
+            HealthWorkout(
+                id: UUID(),
+                activityType: workout.workoutActivityType.rawValue,
+                activityName: workoutActivityName(workout.workoutActivityType),
+                startDate: workout.startDate,
+                endDate: workout.endDate,
+                durationSeconds: workout.duration,
+                totalEnergyBurnedKilocalories: workoutSum(
+                    workout,
+                    identifier: .activeEnergyBurned,
+                    unit: .kilocalorie()
+                ),
+                totalDistanceMeters: workoutSum(
+                    workout,
+                    identifier: .distanceWalkingRunning,
+                    unit: .meter()
+                ),
+                sourceName: workout.sourceRevision.source.name
+            )
+        }
+        .sorted { $0.startDate < $1.startDate }
+    }
+
     private func sampleQuery<T: HKSample>(
         sampleType: HKSampleType,
         startDate: Date,
@@ -423,6 +464,50 @@ final class HealthReporterService {
             || value == HKCategoryValueSleepAnalysis.asleepCore.rawValue
             || value == HKCategoryValueSleepAnalysis.asleepDeep.rawValue
             || value == HKCategoryValueSleepAnalysis.asleepREM.rawValue
+    }
+
+    private func workoutSum(_ workout: HKWorkout, identifier: HKQuantityTypeIdentifier, unit: HKUnit) -> Double? {
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
+            return nil
+        }
+        return workout.statistics(for: type)?.sumQuantity()?.doubleValue(for: unit)
+    }
+
+    private func workoutActivityName(_ activityType: HKWorkoutActivityType) -> String {
+        switch activityType {
+        case .running:
+            return "running"
+        case .walking:
+            return "walking"
+        case .cycling:
+            return "cycling"
+        case .hiking:
+            return "hiking"
+        case .swimming:
+            return "swimming"
+        case .yoga:
+            return "yoga"
+        case .traditionalStrengthTraining:
+            return "traditionalStrengthTraining"
+        case .functionalStrengthTraining:
+            return "functionalStrengthTraining"
+        case .highIntensityIntervalTraining:
+            return "highIntensityIntervalTraining"
+        case .coreTraining:
+            return "coreTraining"
+        case .elliptical:
+            return "elliptical"
+        case .rowing:
+            return "rowing"
+        case .stairClimbing:
+            return "stairClimbing"
+        case .mindAndBody:
+            return "mindAndBody"
+        case .other:
+            return "other"
+        default:
+            return "activityType-\(activityType.rawValue)"
+        }
     }
 }
 

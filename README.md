@@ -52,14 +52,16 @@ curl http://127.0.0.1:8787/v1/status
 curl 'http://127.0.0.1:8787/v1/agent/context?days=14&sampleLimit=20'
 curl 'http://127.0.0.1:8787/v1/summary/daily?days=14'
 curl 'http://127.0.0.1:8787/v1/samples/recent?type=heartRate&limit=50'
+curl 'http://127.0.0.1:8787/v1/workouts/recent?days=30&limit=100'
 curl http://127.0.0.1:8787/v1/report/latest
 curl http://127.0.0.1:8787/v1/openapi.json
 ```
 
 For agents, prefer `/v1/agent/context`: it includes freshness, daily summaries,
-aggregate metrics, latest complete day, sample type coverage, recent samples, and
-the endpoint list in one JSON response. The current day can be partial, so health
-planning agents should prefer `latestCompleteDay` for daily conclusions.
+aggregate metrics, latest complete day, sample type coverage, recent samples,
+recent workouts, and the endpoint list in one JSON response. The current day can
+be partial, so health planning agents should prefer `latestCompleteDay` for daily
+conclusions.
 
 OpenClaw skill installed locally:
 

@@ -101,6 +101,15 @@ final class HealthBridgeHTTPServer {
             let samples = makeRecentSamples(from: latest.report.samples, type: type, limit: limit)
             return .json(samples)
 
+        case ("GET", "/v1/workouts/recent"):
+            guard let latest = await store.latestReport() else {
+                return .notFound(message: "No health report has been received")
+            }
+
+            let days = request.boundedIntQuery("days", default: 30, min: 1, max: 365)
+            let limit = request.boundedIntQuery("limit", default: 100, min: 1, max: 1_000)
+            return .json(makeRecentWorkouts(from: latest.report.workouts, days: days, limit: limit))
+
         case ("GET", "/v1/agent/context"):
             guard let latest = await store.latestReport() else {
                 return .notFound(message: "No health report has been received")
@@ -277,6 +286,7 @@ private struct BridgeStatusPayload: Encodable {
     var agentContextURL: String
     var dailySummaryURL: String
     var recentSamplesURL: String
+    var recentWorkoutsURL: String
     var tailnetIngestURL: String
     var tailnetIPv4IngestURL: String
     var latestReceivedAt: Date?
@@ -294,6 +304,7 @@ private struct BridgeStatusPayload: Encodable {
             agentContextURL: "\(HealthBridgeConstants.agentBaseURL)/v1/agent/context",
             dailySummaryURL: "\(HealthBridgeConstants.agentBaseURL)/v1/summary/daily?days=14",
             recentSamplesURL: "\(HealthBridgeConstants.agentBaseURL)/v1/samples/recent?type=heartRate&limit=50",
+            recentWorkoutsURL: "\(HealthBridgeConstants.agentBaseURL)/v1/workouts/recent?days=30&limit=100",
             tailnetIngestURL: HealthBridgeConstants.tailnetIngestURL,
             tailnetIPv4IngestURL: HealthBridgeConstants.tailnetIPv4IngestURL,
             latestReceivedAt: latest?.receivedAt,
@@ -315,6 +326,7 @@ private struct AgentHealthContext: Encodable {
     var aggregates: AgentHealthAggregates
     var sampleTypes: [AgentSampleTypeSummary]
     var recentSamples: [HealthSample]
+    var recentWorkouts: [HealthWorkout]
     var availableEndpoints: [String: String]
     var agentNotes: [String]
 
@@ -333,11 +345,13 @@ private struct AgentHealthContext: Encodable {
             aggregates: AgentHealthAggregates.make(from: summaries),
             sampleTypes: AgentSampleTypeSummary.make(from: latest.report.samples),
             recentSamples: makeRecentSamples(from: latest.report.samples, type: nil, limit: sampleLimit),
+            recentWorkouts: makeRecentWorkouts(from: latest.report.workouts, days: days, limit: 100),
             availableEndpoints: [
                 "status": "\(HealthBridgeConstants.agentBaseURL)/v1/status",
                 "agentContext": "\(HealthBridgeConstants.agentBaseURL)/v1/agent/context?days=14&sampleLimit=20",
                 "dailySummaries": "\(HealthBridgeConstants.agentBaseURL)/v1/summary/daily?days=14",
                 "recentHeartRateSamples": "\(HealthBridgeConstants.agentBaseURL)/v1/samples/recent?type=heartRate&limit=50",
+                "recentWorkouts": "\(HealthBridgeConstants.agentBaseURL)/v1/workouts/recent?days=30&limit=100",
                 "latestFullReport": "\(HealthBridgeConstants.agentBaseURL)/v1/report/latest",
                 "openapi": "\(HealthBridgeConstants.agentBaseURL)/v1/openapi.json"
             ],
@@ -455,6 +469,20 @@ private func makeRecentSamples(from samples: [HealthSample], type: String?, limi
     return Array(filtered.sorted { $0.endDate > $1.endDate }.prefix(limit))
 }
 
+private func makeRecentWorkouts(from workouts: [HealthWorkout], days: Int, limit: Int) -> [HealthWorkout] {
+    guard limit > 0 else {
+        return []
+    }
+
+    let cutoff = Calendar.current.date(byAdding: .day, value: -days, to: Date()) ?? .distantPast
+    return Array(
+        workouts
+            .filter { $0.endDate >= cutoff }
+            .sorted { $0.endDate > $1.endDate }
+            .prefix(limit)
+    )
+}
+
 private func sum(_ values: [Double?]) -> Double? {
     let presentValues = values.compactMap { $0 }
     guard !presentValues.isEmpty else {
@@ -496,6 +524,7 @@ private struct OpenAPIDocument: Encodable {
                 "/v1/agent/context": ["get": Endpoint(summary: "Return compact agent-oriented health context. Query: days, sampleLimit")],
                 "/v1/summary/daily": ["get": Endpoint(summary: "Return daily health summaries from the latest report. Query: days")],
                 "/v1/samples/recent": ["get": Endpoint(summary: "Return recent raw samples sorted by newest first. Query: type, limit")],
+                "/v1/workouts/recent": ["get": Endpoint(summary: "Return recent workouts sorted by newest first. Query: days, limit")],
                 "/v1/report/latest": ["get": Endpoint(summary: "Return the latest full health report")],
                 "/v1/ingest": ["post": Endpoint(summary: "Receive a health report from the paired iPhone app")]
             ]
