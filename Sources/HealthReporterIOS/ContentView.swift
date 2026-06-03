@@ -44,28 +44,30 @@ private struct WorkoutDashboardTab: View {
     @ObservedObject var viewModel: HealthReporterViewModel
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                DashboardHeader(syncBadgeText: viewModel.syncBadgeText)
+        NavigationStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    DashboardHeader(syncBadgeText: viewModel.syncBadgeText)
 
-                CaloriesHeroCard(
-                    totalText: viewModel.workoutCaloriesTotalText,
-                    dailyAverageText: viewModel.workoutDailyAverageText
-                )
+                    CaloriesHeroCard(
+                        totalText: viewModel.workoutCaloriesTotalText,
+                        dailyAverageText: viewModel.workoutDailyAverageText
+                    )
 
-                HStack(spacing: 12) {
-                    MetricTile(title: "7 天训练", value: viewModel.workoutCountText, systemImage: "figure.run")
-                    MetricTile(title: "7 天活跃", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
+                    HStack(spacing: 12) {
+                        MetricTile(title: "7 天训练", value: viewModel.workoutCountText, systemImage: "figure.run")
+                        MetricTile(title: "7 天活跃", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
+                    }
+
+                    WorkoutChartCard(viewModel: viewModel)
+                    RecentWorkoutCard(rows: viewModel.recentWorkoutRows, allRows: viewModel.allWorkoutRows)
                 }
-
-                WorkoutChartCard(viewModel: viewModel)
-                RecentWorkoutCard(rows: viewModel.recentWorkoutRows)
+                .padding(.horizontal, 20)
+                .padding(.top, 24)
+                .padding(.bottom, 28)
             }
-            .padding(.horizontal, 20)
-            .padding(.top, 24)
-            .padding(.bottom, 28)
+            .background(DataTrackerStyle.background.ignoresSafeArea())
         }
-        .background(DataTrackerStyle.background.ignoresSafeArea())
     }
 }
 
@@ -357,12 +359,31 @@ private struct EmptyChartState: View {
 
 private struct RecentWorkoutCard: View {
     let rows: [RecentWorkoutRow]
+    let allRows: [RecentWorkoutRow]
 
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("最近训练")
-                .font(.system(size: 18, weight: .bold, design: .rounded))
-                .foregroundStyle(.white)
+            HStack(alignment: .center) {
+                Text("最近训练")
+                    .font(.system(size: 18, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+
+                Spacer()
+
+                if !allRows.isEmpty {
+                    NavigationLink {
+                        WorkoutHistoryView(rows: allRows)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Text("查看更多")
+                            Image(systemName: "chevron.right")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(DataTrackerStyle.orange)
+                    }
+                }
+            }
 
             if rows.isEmpty {
                 Text("暂无最近 workout")
@@ -385,6 +406,50 @@ private struct RecentWorkoutCard: View {
         }
         .padding(20)
         .background(DataTrackerStyle.card, in: RoundedRectangle(cornerRadius: 26, style: .continuous))
+    }
+}
+
+private struct WorkoutHistoryView: View {
+    let rows: [RecentWorkoutRow]
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 12) {
+                if rows.isEmpty {
+                    EmptyWorkoutHistoryState()
+                } else {
+                    ForEach(rows) { row in
+                        RecentWorkoutRowView(row: row)
+                            .padding(18)
+                            .background(DataTrackerStyle.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                    }
+                }
+            }
+            .padding(.horizontal, 20)
+            .padding(.top, 18)
+            .padding(.bottom, 28)
+        }
+        .background(DataTrackerStyle.background.ignoresSafeArea())
+        .navigationTitle("全部训练")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbarBackground(DataTrackerStyle.background, for: .navigationBar)
+        .toolbarColorScheme(.dark, for: .navigationBar)
+    }
+}
+
+private struct EmptyWorkoutHistoryState: View {
+    var body: some View {
+        VStack(spacing: 10) {
+            Image(systemName: "figure.run")
+                .font(.system(size: 32, weight: .semibold))
+                .foregroundStyle(DataTrackerStyle.orange.opacity(0.78))
+            Text("暂无训练记录")
+                .font(.system(size: 14, weight: .medium))
+                .foregroundStyle(DataTrackerStyle.textMuted)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 36)
+        .background(DataTrackerStyle.card, in: RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
 }
 

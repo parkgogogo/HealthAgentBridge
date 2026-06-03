@@ -33,6 +33,7 @@ final class HealthReporterViewModel: ObservableObject {
     @Published private(set) var workoutHighlightedDayID: String?
     @Published private(set) var workoutChartAverageKilocalories: Double = 0
     @Published private(set) var recentWorkoutRows: [RecentWorkoutRow] = []
+    @Published private(set) var allWorkoutRows: [RecentWorkoutRow] = []
     @Published private(set) var latestWorkoutText = "暂无"
     @Published private(set) var syncBadgeText = "未同步"
 
@@ -122,6 +123,7 @@ final class HealthReporterViewModel: ObservableObject {
             workoutHighlightedDayID = nil
             workoutChartAverageKilocalories = 0
             recentWorkoutRows = []
+            allWorkoutRows = []
             latestWorkoutText = "暂无"
             return
         }
@@ -147,7 +149,8 @@ final class HealthReporterViewModel: ObservableObject {
             workoutDailyAverageText = formatCalories(summaryTotal / Double(workoutSummaryDays))
             updateSelectedWorkoutPoint(highlightedPoint, reason: highlightedPoint?.kilocalories ?? 0 > 0 ? "最近训练日" : "已选择")
             workoutChartAverageKilocalories = chartActiveDays > 0 ? chartTotal / Double(chartActiveDays) : 0
-            recentWorkoutRows = makeRecentWorkoutRows(from: workouts)
+            allWorkoutRows = makeWorkoutRows(from: workouts)
+            recentWorkoutRows = Array(allWorkoutRows.prefix(3))
             latestWorkoutText = latestWorkout.map(formatLatestWorkout) ?? "暂无"
         } catch {
             workoutCalories = emptyWorkoutCalories()
@@ -161,6 +164,7 @@ final class HealthReporterViewModel: ObservableObject {
             workoutHighlightedDayID = nil
             workoutChartAverageKilocalories = 0
             recentWorkoutRows = []
+            allWorkoutRows = []
             latestWorkoutText = "暂无"
         }
     }
@@ -253,10 +257,9 @@ final class HealthReporterViewModel: ObservableObject {
         workoutHighlightedDayID = point.id
     }
 
-    private func makeRecentWorkoutRows(from workouts: [HealthWorkout]) -> [RecentWorkoutRow] {
+    private func makeWorkoutRows(from workouts: [HealthWorkout]) -> [RecentWorkoutRow] {
         workouts
             .sorted { $0.startDate > $1.startDate }
-            .prefix(3)
             .map { workout in
                 RecentWorkoutRow(
                     id: workout.id,
