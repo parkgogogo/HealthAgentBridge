@@ -113,6 +113,37 @@ GET /v1/packets/recent?limit=50
 Lists pending or recently updated packets.
 
 ```text
+PUT /v1/packets/{packetId}
+```
+
+Updates an existing packet and marks it `pending_ios_sync` so the iOS app rewrites it into Apple Health. The packet type cannot change. Send the matching payload:
+
+```json
+{
+  "bodyWeight": {
+    "measuredAt": "2026-06-03T15:30:00Z",
+    "weightKilograms": 78.2,
+    "rawText": "78.2 kg"
+  }
+}
+```
+
+or:
+
+```json
+{
+  "foodIntake": {
+    "occurredAt": "2026-06-03T12:20:00Z",
+    "mealType": "lunch",
+    "rawText": "午饭：牛肉饭一份",
+    "foodItems": [],
+    "estimatedCaloriesKcal": 590,
+    "confidence": "medium"
+  }
+}
+```
+
+```text
 GET /v1/report/latest
 ```
 

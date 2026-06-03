@@ -71,6 +71,19 @@ final class BridgeClient {
         return try JSONCoding.decoder.decode(HealthPacketListPayload.self, from: data).packets
     }
 
+    func fetchRecentPackets(limit: Int = 50) async throws -> [HealthPacket] {
+        let path = "/v1/packets/recent?limit=\(limit)"
+        let data = try await request(method: "GET", path: path, body: nil)
+        return try JSONCoding.decoder.decode(HealthPacketListPayload.self, from: data).packets
+    }
+
+    func updatePacket(packetId: String, request updateRequest: HealthPacketUpdateRequest) async throws -> HealthPacket {
+        let body = try JSONCoding.encoder.encode(updateRequest)
+        let path = "/v1/packets/\(packetId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? packetId)"
+        let data = try await request(method: "PUT", path: path, body: body)
+        return try JSONCoding.decoder.decode(HealthPacket.self, from: data)
+    }
+
     func acknowledgePacket(packetId: String, request: HealthPacketAcknowledgeRequest) async throws -> BridgePacketSyncResult {
         let body = try JSONCoding.encoder.encode(request)
         let path = "/v1/packets/\(packetId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? packetId)/ack"

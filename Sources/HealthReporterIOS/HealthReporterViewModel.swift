@@ -14,6 +14,27 @@ struct RecentWorkoutRow: Identifiable, Hashable {
     var systemImage: String
 }
 
+struct CalorieIntakePoint: Identifiable, Hashable {
+    var id: String
+    var date: Date
+    var kilocalories: Double?
+}
+
+struct WeightTrendPoint: Identifiable, Hashable {
+    var id: String
+    var date: Date
+    var kilograms: Double
+}
+
+struct HealthRecordRow: Identifiable, Hashable {
+    var id: String
+    var packet: HealthPacket
+    var title: String
+    var subtitle: String
+    var detail: String
+    var systemImage: String
+}
+
 @MainActor
 final class HealthReporterViewModel: ObservableObject {
     @Published private(set) var isReportingEnabled = false
@@ -36,10 +57,28 @@ final class HealthReporterViewModel: ObservableObject {
     @Published private(set) var allWorkoutRows: [RecentWorkoutRow] = []
     @Published private(set) var latestWorkoutText = "暂无"
     @Published private(set) var syncBadgeText = "未同步"
+    @Published private(set) var calorieIntake: [CalorieIntakePoint] = []
+    @Published private(set) var calorieChartMessage: String? = "状态页开启健康上报后显示"
+    @Published private(set) var calorieIntakeTotalText = "0 kcal"
+    @Published private(set) var calorieDailyAverageText = "0 kcal"
+    @Published private(set) var calorieTrackedDaysText = "0 天"
+    @Published private(set) var calorieSelectedIntakeText = "0 kcal"
+    @Published private(set) var calorieSelectedDayText = "暂无记录"
+    @Published private(set) var calorieHighlightedDayID: String?
+    @Published private(set) var weightTrendPoints: [WeightTrendPoint] = []
+    @Published private(set) var weightTrendMessage = "至少记录 7 天体重后展示趋势"
+    @Published private(set) var latestWeightText = "暂无"
+    @Published private(set) var weightDeltaText = "数据不足"
+    @Published private(set) var recentRecordRows: [HealthRecordRow] = []
+    @Published private(set) var allRecordRows: [HealthRecordRow] = []
+    @Published private(set) var recordErrorText: String?
 
     private let service = HealthReporterService.shared
     private let workoutChartDays = 50
     private let workoutSummaryDays = 7
+    private let nutritionChartDays = 50
+    private let nutritionSummaryDays = 7
+    private let weightTrendMinimumDays = 7
     private static let workoutDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -66,11 +105,24 @@ final class HealthReporterViewModel: ObservableObject {
         workoutCalories.map(\.kilocalories).max() ?? 0
     }
 
+    var hasCalorieIntake: Bool {
+        calorieIntake.contains { ($0.kilocalories ?? 0) > 0 }
+    }
+
+    var hasWeightTrend: Bool {
+        weightTrendPoints.count >= weightTrendMinimumDays
+    }
+
+    var calorieHeatmapMaxKilocalories: Double {
+        max(2_400, calorieIntake.compactMap(\.kilocalories).max() ?? 0)
+    }
+
     func load() async {
         isReportingEnabled = service.isReportingEnabled
         updateStatusText()
         await refreshDisplay()
         await refreshWorkoutChart()
+        await refreshNutritionDashboard()
     }
 
     func setReportingEnabled(_ enabled: Bool) {
@@ -86,6 +138,7 @@ final class HealthReporterViewModel: ObservableObject {
                 }
                 await self.refreshDisplay()
                 await self.refreshWorkoutChart()
+                await self.refreshNutritionDashboard()
             } catch {
                 await MainActor.run {
                     self.isReportingEnabled = self.service.isReportingEnabled
@@ -93,6 +146,7 @@ final class HealthReporterViewModel: ObservableObject {
                 }
                 await self.refreshDisplay()
                 await self.refreshWorkoutChart()
+                await self.refreshNutritionDashboard()
             }
         }
     }
@@ -169,8 +223,108 @@ final class HealthReporterViewModel: ObservableObject {
         }
     }
 
+    func refreshNutritionDashboard() async {
+        guard isReportingEnabled else {
+            resetNutritionDashboard(message: "状态页开启健康上报后显示")
+            return
+        }
+
+        do {
+            async let summariesTask = service.dailySummariesForDisplay(days: nutritionChartDays)
+            async let packetsTask = service.recentHealthPacketsForDisplay(limit: 100)
+            let (summaries, packets) = try await (summariesTask, packetsTask)
+            let caloriePoints = makeCalorieIntakePoints(from: summaries)
+            let summaryPoints = Array(caloriePoints.suffix(nutritionSummaryDays))
+            let trackedSummaryPoints = summaryPoints.compactMap(\.kilocalories)
+            let summaryTotal = trackedSummaryPoints.reduce(0, +)
+            let trackedDays = trackedSummaryPoints.count
+            let highlightedPoint = caloriePoints.first { $0.id == calorieHighlightedDayID }
+                ?? caloriePoints.reversed().first { $0.kilocalories != nil }
+            let weights = makeWeightTrendPoints(from: summaries)
+            let rows = makeRecordRows(from: packets)
+
+            calorieIntake = caloriePoints
+            calorieChartMessage = caloriePoints.contains { $0.kilocalories != nil }
+                ? nil
+                : "最近 \(nutritionChartDays) 天没有饮食热量记录"
+            calorieIntakeTotalText = formatCalories(summaryTotal)
+            calorieDailyAverageText = trackedDays > 0 ? formatCalories(summaryTotal / Double(trackedDays)) : "0 kcal"
+            calorieTrackedDaysText = "\(trackedDays) 天"
+            updateSelectedCaloriePoint(highlightedPoint, reason: highlightedPoint?.kilocalories == nil ? "无记录" : "已选择")
+            weightTrendPoints = weights
+            latestWeightText = weights.last.map { String(format: "%.1f kg", $0.kilograms) } ?? "暂无"
+            weightDeltaText = formatWeightDelta(weights)
+            weightTrendMessage = weights.count >= weightTrendMinimumDays
+                ? ""
+                : "已有 \(weights.count) 天，至少 \(weightTrendMinimumDays) 天后展示趋势"
+            allRecordRows = rows
+            recentRecordRows = Array(rows.prefix(3))
+            recordErrorText = nil
+        } catch {
+            resetNutritionDashboard(message: error.localizedDescription)
+        }
+    }
+
     func selectWorkoutDay(_ point: WorkoutCaloriesPoint) {
         updateSelectedWorkoutPoint(point, reason: point.kilocalories > 0 ? "已选择" : "无 workout")
+    }
+
+    func selectCalorieDay(_ point: CalorieIntakePoint) {
+        updateSelectedCaloriePoint(point, reason: point.kilocalories == nil ? "无记录" : "已选择")
+    }
+
+    func updateBodyWeightPacket(_ packet: HealthPacket, measuredAt: Date, kilograms: Double, rawText: String?, note: String?) async throws {
+        let payload = BodyWeightPayload(
+            measuredAt: measuredAt,
+            weightKilograms: kilograms,
+            rawText: rawText?.nilIfBlank,
+            note: note?.nilIfBlank
+        )
+        _ = try await service.updateHealthPacketForDisplay(
+            packetId: packet.packetId,
+            request: HealthPacketUpdateRequest(foodIntake: nil, bodyWeight: payload)
+        )
+        await refreshDisplay()
+        await refreshNutritionDashboard()
+    }
+
+    func updateFoodPacket(
+        _ packet: HealthPacket,
+        occurredAt: Date,
+        rawText: String,
+        mealType: String?,
+        calories: Double,
+        protein: Double?,
+        carbohydrates: Double?,
+        fat: Double?,
+        confidence: HealthPacketConfidence
+    ) async throws {
+        let payload = FoodIntakePayload(
+            occurredAt: occurredAt,
+            mealType: mealType?.nilIfBlank,
+            rawText: rawText,
+            foodItems: [
+                FoodItemEstimate(
+                    name: rawText,
+                    estimatedCaloriesKcal: calories,
+                    proteinGrams: protein,
+                    carbohydrateGrams: carbohydrates,
+                    fatGrams: fat
+                )
+            ],
+            estimatedCaloriesKcal: calories,
+            proteinGrams: protein,
+            carbohydrateGrams: carbohydrates,
+            fatGrams: fat,
+            confidence: confidence,
+            estimationNotes: nil
+        )
+        _ = try await service.updateHealthPacketForDisplay(
+            packetId: packet.packetId,
+            request: HealthPacketUpdateRequest(foodIntake: payload, bodyWeight: nil)
+        )
+        await refreshDisplay()
+        await refreshNutritionDashboard()
     }
 
     private func updateStatusText() {
@@ -255,6 +409,136 @@ final class HealthReporterViewModel: ObservableObject {
         workoutSelectedCaloriesText = formatCalories(point.kilocalories)
         workoutSelectedDayText = "\(Self.workoutDayFormatter.string(from: point.date)) · \(reason)"
         workoutHighlightedDayID = point.id
+    }
+
+    private func updateSelectedCaloriePoint(_ point: CalorieIntakePoint?, reason: String) {
+        guard let point else {
+            calorieSelectedIntakeText = "0 kcal"
+            calorieSelectedDayText = "暂无记录"
+            calorieHighlightedDayID = nil
+            return
+        }
+
+        calorieSelectedIntakeText = point.kilocalories.map(formatCalories) ?? "无记录"
+        calorieSelectedDayText = "\(Self.workoutDayFormatter.string(from: point.date)) · \(reason)"
+        calorieHighlightedDayID = point.id
+    }
+
+    private func resetNutritionDashboard(message: String) {
+        calorieIntake = emptyCalorieIntake()
+        calorieChartMessage = message
+        calorieIntakeTotalText = "0 kcal"
+        calorieDailyAverageText = "0 kcal"
+        calorieTrackedDaysText = "0 天"
+        calorieSelectedIntakeText = "0 kcal"
+        calorieSelectedDayText = "暂无记录"
+        calorieHighlightedDayID = nil
+        weightTrendPoints = []
+        weightTrendMessage = "至少记录 \(weightTrendMinimumDays) 天体重后展示趋势"
+        latestWeightText = "暂无"
+        weightDeltaText = "数据不足"
+        recentRecordRows = []
+        allRecordRows = []
+        recordErrorText = message
+    }
+
+    private func makeCalorieIntakePoints(from summaries: [DailyHealthSummary]) -> [CalorieIntakePoint] {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let startDate = calendar.date(byAdding: .day, value: -(nutritionChartDays - 1), to: today) else {
+            return []
+        }
+
+        var summariesByDay: [String: DailyHealthSummary] = [:]
+        for summary in summaries {
+            summariesByDay[summary.date] = summary
+        }
+
+        return (0..<nutritionChartDays).compactMap { offset in
+            guard let day = calendar.date(byAdding: .day, value: offset, to: startDate) else { return nil }
+            let id = DateFormatter.healthBridgeDay.string(from: day)
+            return CalorieIntakePoint(
+                id: id,
+                date: day,
+                kilocalories: summariesByDay[id]?.dietaryEnergyKilocalories
+            )
+        }
+    }
+
+    private func emptyCalorieIntake() -> [CalorieIntakePoint] {
+        makeCalorieIntakePoints(from: [])
+    }
+
+    private func makeWeightTrendPoints(from summaries: [DailyHealthSummary]) -> [WeightTrendPoint] {
+        summaries.compactMap { summary in
+            guard let kilograms = summary.bodyMassKilograms,
+                  let date = DateFormatter.healthBridgeDay.date(from: summary.date) else {
+                return nil
+            }
+            return WeightTrendPoint(id: summary.date, date: date, kilograms: kilograms)
+        }
+        .sorted { $0.date < $1.date }
+    }
+
+    private func formatWeightDelta(_ points: [WeightTrendPoint]) -> String {
+        guard let first = points.first, let last = points.last, points.count >= 2 else {
+            return "数据不足"
+        }
+
+        let delta = last.kilograms - first.kilograms
+        if abs(delta) < 0.05 {
+            return "基本持平"
+        }
+
+        let sign = delta > 0 ? "+" : ""
+        return "\(sign)\(String(format: "%.1f", delta)) kg"
+    }
+
+    private func makeRecordRows(from packets: [HealthPacket]) -> [HealthRecordRow] {
+        packets
+            .filter { $0.type == .foodIntake || $0.type == .bodyWeight }
+            .sorted { $0.updatedAt > $1.updatedAt }
+            .map { packet in
+                switch packet.type {
+                case .bodyWeight:
+                    let payload = packet.bodyWeight
+                    let weight = payload.map { String(format: "%.1f kg", $0.weightKilograms) } ?? "体重"
+                    let date = payload.map { Self.workoutDateFormatter.string(from: $0.measuredAt) } ?? Self.workoutDateFormatter.string(from: packet.updatedAt)
+                    return HealthRecordRow(
+                        id: packet.packetId,
+                        packet: packet,
+                        title: "体重",
+                        subtitle: "\(date) · \(localizedPacketStatus(packet.status))",
+                        detail: weight,
+                        systemImage: "scalemass.fill"
+                    )
+                case .foodIntake:
+                    let payload = packet.foodIntake
+                    let title = payload?.mealType?.nilIfBlank ?? "饮食"
+                    let date = payload.map { Self.workoutDateFormatter.string(from: $0.occurredAt) } ?? Self.workoutDateFormatter.string(from: packet.updatedAt)
+                    return HealthRecordRow(
+                        id: packet.packetId,
+                        packet: packet,
+                        title: title,
+                        subtitle: "\(date) · \(localizedPacketStatus(packet.status))",
+                        detail: payload.map { formatCalories($0.estimatedCaloriesKcal) } ?? "无 kcal",
+                        systemImage: "fork.knife"
+                    )
+                }
+            }
+    }
+
+    private func localizedPacketStatus(_ status: HealthPacketStatus) -> String {
+        switch status {
+        case .pendingIOSSync:
+            return "待写入"
+        case .writtenToHealthKit:
+            return "已写入"
+        case .failed:
+            return "失败"
+        case .cancelled:
+            return "已取消"
+        }
     }
 
     private func makeWorkoutRows(from workouts: [HealthWorkout]) -> [RecentWorkoutRow] {
@@ -385,5 +669,12 @@ final class HealthReporterViewModel: ObservableObject {
         default:
             return "figure.mixed.cardio"
         }
+    }
+}
+
+private extension String {
+    var nilIfBlank: String? {
+        let trimmed = trimmingCharacters(in: .whitespacesAndNewlines)
+        return trimmed.isEmpty ? nil : trimmed
     }
 }

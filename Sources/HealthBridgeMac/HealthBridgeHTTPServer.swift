@@ -159,6 +159,17 @@ final class HealthBridgeHTTPServer {
             }
 
         default:
+            if request.method == "PUT",
+               let packetId = request.path.packetIDPathComponent {
+                do {
+                    let updateRequest = try JSONCoding.decoder.decode(HealthPacketUpdateRequest.self, from: request.body)
+                    let packet = try await store.updatePacket(packetId: packetId, request: updateRequest)
+                    return .json(packet)
+                } catch {
+                    return .badRequest(message: error.localizedDescription)
+                }
+            }
+
             if request.method == "POST",
                let packetId = request.path.packetIDAcknowledgementPathComponent {
                 do {
@@ -274,7 +285,7 @@ private struct HTTPResponse {
         Content-Length: \(body.count)\r
         Access-Control-Allow-Origin: *\r
         Access-Control-Allow-Headers: Authorization, Content-Type\r
-        Access-Control-Allow-Methods: GET, POST, OPTIONS\r
+        Access-Control-Allow-Methods: GET, POST, PUT, OPTIONS\r
         Connection: close\r
         \r
 
@@ -605,6 +616,7 @@ private struct OpenAPIDocument: Encodable {
                 "/v1/packets": ["post": Endpoint(summary: "Create a Health Packet for iOS to write into Apple Health")],
                 "/v1/packets/pending": ["get": Endpoint(summary: "Return pending Health Packets for iOS sync")],
                 "/v1/packets/recent": ["get": Endpoint(summary: "Return recently updated Health Packets")],
+                "/v1/packets/{packetId}": ["put": Endpoint(summary: "Update an existing Health Packet and mark it pending for iOS rewrite")],
                 "/v1/packets/{packetId}/ack": ["post": Endpoint(summary: "Acknowledge a packet write result from iOS")]
             ]
         )
@@ -612,6 +624,20 @@ private struct OpenAPIDocument: Encodable {
 }
 
 private extension String {
+    var packetIDPathComponent: String? {
+        let prefix = "/v1/packets/"
+        guard hasPrefix(prefix), !hasSuffix("/ack") else {
+            return nil
+        }
+
+        let start = index(startIndex, offsetBy: prefix.count)
+        guard start < endIndex else {
+            return nil
+        }
+
+        return String(self[start..<endIndex]).removingPercentEncoding
+    }
+
     var packetIDAcknowledgementPathComponent: String? {
         let prefix = "/v1/packets/"
         let suffix = "/ack"

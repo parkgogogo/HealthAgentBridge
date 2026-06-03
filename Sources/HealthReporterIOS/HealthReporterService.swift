@@ -31,6 +31,7 @@ final class HealthReporterService {
     private let lastSyncEndpointKey = "healthReporting.lastSuccessfulEndpoint"
     private let lastUploadErrorKey = "healthReporting.lastUploadError"
     private let queryQueue = DispatchQueue(label: "HealthReporter.HealthKit")
+    private let healthPacketIDMetadataKey = "DataTrackerPacketId"
     private var observerQueries: [HKObserverQuery] = []
 
     var isReportingEnabled: Bool {
@@ -87,6 +88,30 @@ final class HealthReporterService {
         }
 
         return try await collectRecentWorkouts(days: days, limit: limit)
+    }
+
+    func dailySummariesForDisplay(days: Int) async throws -> [DailyHealthSummary] {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            throw HealthReporterError.healthDataUnavailable
+        }
+
+        return try await collectDailySummaries(days: days)
+    }
+
+    func recentHealthPacketsForDisplay(limit: Int) async throws -> [HealthPacket] {
+        try await bridgeClient.fetchRecentPackets(limit: limit)
+    }
+
+    func updateHealthPacketForDisplay(packetId: String, request: HealthPacketUpdateRequest) async throws -> HealthPacket {
+        let packet = try await bridgeClient.updatePacket(packetId: packetId, request: request)
+        if isReportingEnabled {
+            do {
+                try await syncRecentHealthData(reason: "packet-edit")
+            } catch {
+                NSLog("HealthReporter packet edit sync failed: \(error.localizedDescription)")
+            }
+        }
+        return packet
     }
 
     private func startReporting() async throws {
@@ -604,6 +629,7 @@ final class HealthReporterService {
             metadata: healthPacketMetadata(packet, label: payload.rawText ?? payload.note)
         )
 
+        try await deleteExistingHealthObjects(for: packet)
         try await saveHealthObjects([sample])
         return [sample.uuid.uuidString]
     }
@@ -656,6 +682,7 @@ final class HealthReporterService {
             throw HealthReporterError.invalidPacket("foodIntake has no writable nutrition samples")
         }
 
+        try await deleteExistingHealthObjects(for: packet)
         try await saveHealthObjects(samples)
         return samples.map { $0.uuid.uuidString }
     }
@@ -688,7 +715,7 @@ final class HealthReporterService {
 
     private func healthPacketMetadata(_ packet: HealthPacket, label: String?, mealType: String? = nil) -> [String: Any] {
         var metadata: [String: Any] = [
-            "DataTrackerPacketId": packet.packetId,
+            healthPacketIDMetadataKey: packet.packetId,
             "DataTrackerPacketType": packet.type.rawValue,
             "DataTrackerPacketRevision": packet.revision,
             "DataTrackerPacketSource": packet.source.rawValue,
@@ -704,6 +731,53 @@ final class HealthReporterService {
         }
 
         return metadata
+    }
+
+    private func deleteExistingHealthObjects(for packet: HealthPacket) async throws {
+        let sampleTypes = try writableSampleTypes()
+        var objectsToDelete: [HKObject] = []
+        for sampleType in sampleTypes {
+            let samples = try await samplesForPacket(packet.packetId, sampleType: sampleType)
+            objectsToDelete.append(contentsOf: samples)
+        }
+
+        guard !objectsToDelete.isEmpty else {
+            return
+        }
+
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.delete(objectsToDelete) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthReporterError.healthDataUnavailable)
+                }
+            }
+        }
+    }
+
+    private func samplesForPacket(_ packetId: String, sampleType: HKSampleType) async throws -> [HKSample] {
+        try await withCheckedThrowingContinuation { continuation in
+            let predicate = HKQuery.predicateForObjects(
+                withMetadataKey: healthPacketIDMetadataKey,
+                allowedValues: [packetId]
+            )
+            let query = HKSampleQuery(
+                sampleType: sampleType,
+                predicate: predicate,
+                limit: HKObjectQueryNoLimit,
+                sortDescriptors: nil
+            ) { _, samples, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: samples ?? [])
+                }
+            }
+            healthStore.execute(query)
+        }
     }
 
     private func saveHealthObjects(_ objects: [HKObject]) async throws {

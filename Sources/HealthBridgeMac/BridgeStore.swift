@@ -102,6 +102,37 @@ actor BridgeStore {
         return updated
     }
 
+    func updatePacket(packetId: String, request: HealthPacketUpdateRequest) throws -> HealthPacket {
+        guard let index = packets.firstIndex(where: { $0.packetId == packetId }) else {
+            throw BridgeStoreError.packetNotFound(packetId)
+        }
+
+        var packet = packets[index]
+        switch packet.type {
+        case .foodIntake:
+            guard let foodIntake = request.foodIntake else {
+                throw BridgeStoreError.invalidPacket("foodIntake payload is required")
+            }
+            packet.foodIntake = foodIntake
+            packet.bodyWeight = nil
+        case .bodyWeight:
+            guard let bodyWeight = request.bodyWeight else {
+                throw BridgeStoreError.invalidPacket("bodyWeight payload is required")
+            }
+            packet.bodyWeight = bodyWeight
+            packet.foodIntake = nil
+        }
+
+        packet.status = .pendingIOSSync
+        packet.revision += 1
+        packet.updatedAt = Date()
+        packet.healthKitObjectIds = []
+        packet.lastError = nil
+        packets[index] = packet
+        try savePackets()
+        return packet
+    }
+
     private static func load(from url: URL) throws -> StoredHealthReport {
         let data = try Data(contentsOf: url)
         return try JSONCoding.decoder.decode(StoredHealthReport.self, from: data)

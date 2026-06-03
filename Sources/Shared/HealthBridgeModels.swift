@@ -238,6 +238,11 @@ struct HealthPacketAcknowledgeRequest: Codable, Hashable {
     var errorMessage: String?
 }
 
+struct HealthPacketUpdateRequest: Codable, Hashable {
+    var foodIntake: FoodIntakePayload?
+    var bodyWeight: BodyWeightPayload?
+}
+
 struct HealthPacketListPayload: Codable, Hashable {
     var packets: [HealthPacket]
 }
