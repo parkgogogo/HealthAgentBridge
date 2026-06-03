@@ -131,6 +131,6 @@ curl -sS 'http://127.0.0.1:8787/v1/agent/context?days=7&sampleLimit=5' | jq .
 curl -sS 'http://127.0.0.1:8787/v1/summary/daily?days=30' | jq .
 curl -sS 'http://127.0.0.1:8787/v1/samples/recent?type=heartRate&limit=20' | jq .
 curl -sS 'http://127.0.0.1:8787/v1/workouts/recent?days=30&limit=20' | jq .
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-weight --kg 78.4 --raw-text "78.4 kg"
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-weight --kg 78.4 --raw-text "78.4 kg"
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch
 ```

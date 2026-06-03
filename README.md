@@ -73,7 +73,7 @@ recent workouts, and the endpoint list in one JSON response. The current day can
 be partial, so health planning agents should prefer `latestCompleteDay` for daily
 conclusions.
 
-OpenClaw skill is packaged in this repository at `skills/health-data-bridge`.
+OpenClaw skill is packaged in this repository at `skills/health-tracker`.
 Install or refresh it into `~/.openclaw` with:
 
 ```sh
@@ -83,9 +83,9 @@ Install or refresh it into `~/.openclaw` with:
 After installation, OpenClaw can use:
 
 ```sh
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py context --days 14
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-weight --kg 78.4 --raw-text "78.4 kg"
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py context --days 14
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-weight --kg 78.4 --raw-text "78.4 kg"
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch
 ```
 
 The iOS app uses this shared token when posting to the Mac:

@@ -1,16 +1,16 @@
 ---
-name: health-data-bridge
-description: Access the user's local Apple Health data through the Health Agent Bridge HTTP service on macOS. Use when the user asks about recent health metrics, Apple Health data, steps, sleep, heart rate, activity, exercise, health trends, or wants health data summarized for planning. Always fetch fresh data from the bridge instead of relying on memory.
+name: health-tracker
+description: Access and update the user's local Apple Health tracking data through the Data Tracker HTTP service on macOS. Use when the user asks about recent health metrics, Apple Health data, steps, sleep, heart rate, activity, exercise, health trends, body weight, food intake, or wants health data summarized for planning. Always fetch fresh data from the tracker instead of relying on memory.
 ---
 
-# Health Data Bridge
+# Health Tracker
 
 ## Quick Start
 
 Fetch the compact agent context first:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py context --days 14 --sample-limit 20
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py context --days 14 --sample-limit 20
 ```
 
 Use this endpoint data as the source of truth for health analysis. The bridge runs on the user's Mac at `http://127.0.0.1:8787`.
@@ -20,45 +20,45 @@ Use this endpoint data as the source of truth for health analysis. The bridge ru
 1. Check freshness when needed:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py status
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py status
 ```
 
 2. Read the compact context for most tasks:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py context --days 14
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py context --days 14
 ```
 
 3. For trend calculations, fetch daily summaries with an explicit window:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py daily --days 30
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py daily --days 30
 ```
 
 4. For raw heart-rate inspection, fetch recent samples:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py samples --type heartRate --limit 100
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py samples --type heartRate --limit 100
 ```
 
 5. For logged workouts, fetch recent workouts:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py workouts --days 30 --limit 100
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py workouts --days 30 --limit 100
 ```
 
 6. To record body weight or food intake, create a Health Packet on the Mac. The iOS app will later write the packet into Apple Health and acknowledge it:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-weight --kg 78.4 --raw-text "78.4 kg"
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch --protein 32 --carbs 78 --fat 18 --confidence medium
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-weight --kg 78.4 --raw-text "78.4 kg"
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py create-food --calories 620 --raw-text "午饭：牛肉饭一份" --meal-type lunch --protein 32 --carbs 78 --fat 18 --confidence medium
 ```
 
 7. After creating packets, check whether iOS has written them into Apple Health:
 
 ```bash
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py packets-pending
-python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py packets-recent
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py packets-pending
+python3 ~/.openclaw/skills/health-tracker/scripts/health_tracker.py packets-recent
 ```
 
 ## Interpretation Rules
@@ -75,4 +75,4 @@ python3 ~/.openclaw/skills/health-data-bridge/scripts/health_bridge.py packets-r
 ## Resources
 
 - API details: `references/api.md`
-- Script wrapper: `scripts/health_bridge.py`
+- Script wrapper: `scripts/health_tracker.py`

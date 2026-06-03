@@ -1,4 +1,4 @@
 interface:
-  display_name: "Health Data Bridge"
-  short_description: "Read local Apple Health bridge data"
-  default_prompt: "Use $health-data-bridge to inspect my recent Apple Health data."
+  display_name: "Health Tracker"
+  short_description: "Track local Apple Health data"
+  default_prompt: "Use $health-tracker to inspect my recent Apple Health data."
