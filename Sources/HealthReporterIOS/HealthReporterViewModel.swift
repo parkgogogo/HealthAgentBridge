@@ -38,6 +38,7 @@ final class HealthReporterViewModel: ObservableObject {
 
     private let service = HealthReporterService.shared
     private let workoutChartDays = 50
+    private let workoutSummaryDays = 7
     private static let workoutDateFormatter: DateFormatter = {
         let formatter = DateFormatter()
         formatter.calendar = Calendar(identifier: .gregorian)
@@ -128,20 +129,24 @@ final class HealthReporterViewModel: ObservableObject {
         do {
             let workouts = try await service.recentWorkoutsForDisplay(days: workoutChartDays, limit: 100)
             let points = makeWorkoutCaloriesPoints(from: workouts)
-            let total = points.reduce(0) { $0 + $1.kilocalories }
-            let activeDays = points.filter { $0.kilocalories > 0 }.count
+            let chartTotal = points.reduce(0) { $0 + $1.kilocalories }
+            let chartActiveDays = points.filter { $0.kilocalories > 0 }.count
+            let summaryPoints = workoutSummaryPoints(from: points)
+            let summaryTotal = summaryPoints.reduce(0) { $0 + $1.kilocalories }
+            let summaryActiveDays = summaryPoints.filter { $0.kilocalories > 0 }.count
+            let summaryWorkouts = workoutsInSummaryWindow(workouts, summaryPoints: summaryPoints)
             let latestWorkout = workouts.max { $0.startDate < $1.startDate }
             let highlightedPoint = points.first { $0.id == workoutHighlightedDayID }
                 ?? points.filter { $0.kilocalories > 0 }.max { $0.date < $1.date }
 
             workoutCalories = points
-            workoutChartMessage = total > 0 ? nil : "最近 \(workoutChartDays) 天没有可展示的 workout 卡路里"
-            workoutCaloriesTotalText = formatCalories(total)
-            workoutCountText = "\(workouts.count) 次"
-            workoutActiveDaysText = "\(activeDays) 天"
-            workoutDailyAverageText = formatCalories(total / Double(workoutChartDays))
+            workoutChartMessage = chartTotal > 0 ? nil : "最近 \(workoutChartDays) 天没有可展示的 workout 卡路里"
+            workoutCaloriesTotalText = formatCalories(summaryTotal)
+            workoutCountText = "\(summaryWorkouts.count) 次"
+            workoutActiveDaysText = "\(summaryActiveDays) 天"
+            workoutDailyAverageText = formatCalories(summaryTotal / Double(workoutSummaryDays))
             updateSelectedWorkoutPoint(highlightedPoint, reason: highlightedPoint?.kilocalories ?? 0 > 0 ? "最近训练日" : "已选择")
-            workoutChartAverageKilocalories = activeDays > 0 ? total / Double(activeDays) : 0
+            workoutChartAverageKilocalories = chartActiveDays > 0 ? chartTotal / Double(chartActiveDays) : 0
             recentWorkoutRows = makeRecentWorkoutRows(from: workouts)
             latestWorkoutText = latestWorkout.map(formatLatestWorkout) ?? "暂无"
         } catch {
@@ -208,6 +213,24 @@ final class HealthReporterViewModel: ObservableObject {
 
     private func emptyWorkoutCalories() -> [WorkoutCaloriesPoint] {
         makeWorkoutCaloriesPoints(from: [])
+    }
+
+    private func workoutSummaryPoints(from points: [WorkoutCaloriesPoint]) -> [WorkoutCaloriesPoint] {
+        Array(points.suffix(workoutSummaryDays))
+    }
+
+    private func workoutsInSummaryWindow(_ workouts: [HealthWorkout], summaryPoints: [WorkoutCaloriesPoint]) -> [HealthWorkout] {
+        guard let startDate = summaryPoints.first?.date,
+              let endDate = summaryPoints.last?.date
+        else {
+            return []
+        }
+
+        let calendar = Calendar.current
+        return workouts.filter { workout in
+            let day = calendar.startOfDay(for: workout.startDate)
+            return day >= startDate && day <= endDate
+        }
     }
 
     private func formatLatestWorkout(_ workout: HealthWorkout) -> String {

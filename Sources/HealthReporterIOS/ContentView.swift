@@ -54,8 +54,8 @@ private struct WorkoutDashboardTab: View {
                 )
 
                 HStack(spacing: 12) {
-                    MetricTile(title: "训练次数", value: viewModel.workoutCountText, systemImage: "figure.run")
-                    MetricTile(title: "活跃天数", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
+                    MetricTile(title: "7 天训练", value: viewModel.workoutCountText, systemImage: "figure.run")
+                    MetricTile(title: "7 天活跃", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
                 }
 
                 WorkoutChartCard(viewModel: viewModel)
@@ -74,13 +74,10 @@ private struct DashboardHeader: View {
 
     var body: some View {
         HStack(alignment: .center) {
-            VStack(alignment: .leading, spacing: 4) {
+            VStack(alignment: .leading, spacing: 0) {
                 Text("Data Tracker")
                     .font(.system(size: 30, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
-                Text("HealthKit workout overview")
-                    .font(.system(size: 14, weight: .medium))
-                    .foregroundStyle(DataTrackerStyle.textMuted)
             }
 
             Spacer()
@@ -128,7 +125,7 @@ private struct CaloriesHeroCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("最近 50 天总消耗")
+                    Text("最近 7 天总消耗")
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.90))
