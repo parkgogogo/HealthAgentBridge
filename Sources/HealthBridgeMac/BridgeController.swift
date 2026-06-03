@@ -7,6 +7,7 @@ final class BridgeController: ObservableObject {
     @Published private(set) var latestReceivedText = "尚未接收"
     @Published private(set) var latestGeneratedText = "尚未接收"
     @Published private(set) var latestDeviceText = "暂无"
+    @Published private(set) var packetQueueText = "无"
 
     private let store = BridgeStore()
     private var server: HealthBridgeHTTPServer?
@@ -51,6 +52,15 @@ final class BridgeController: ObservableObject {
     }
 
     func refreshLatest() async {
+        let packets = await store.allPackets()
+        let pendingCount = packets.filter { $0.status == .pendingIOSSync }.count
+        let failedCount = packets.filter { $0.status == .failed }.count
+        if failedCount > 0 {
+            packetQueueText = "\(pendingCount) 待写入，\(failedCount) 失败"
+        } else {
+            packetQueueText = pendingCount == 0 ? "无" : "\(pendingCount) 条待写入"
+        }
+
         if let latest = await store.latestReport() {
             latestReceivedText = HealthBridgeDisplayTime.latestSyncText(for: latest.receivedAt)
             latestGeneratedText = HealthBridgeDisplayTime.latestSyncText(for: latest.report.generatedAt)

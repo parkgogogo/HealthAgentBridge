@@ -28,6 +28,10 @@ struct BridgeUploadResult {
     var endpointDescription: String
 }
 
+struct BridgePacketSyncResult {
+    var endpointDescription: String
+}
+
 final class BridgeClient {
     private let queue = DispatchQueue(label: "HealthReporter.BridgeClient")
 
@@ -59,6 +63,19 @@ final class BridgeClient {
                 bonjour: bonjourError.localizedDescription
             )
         }
+    }
+
+    func fetchPendingPackets(limit: Int = 50) async throws -> [HealthPacket] {
+        let path = "/v1/packets/pending?limit=\(limit)"
+        let data = try await request(method: "GET", path: path, body: nil)
+        return try JSONCoding.decoder.decode(HealthPacketListPayload.self, from: data).packets
+    }
+
+    func acknowledgePacket(packetId: String, request: HealthPacketAcknowledgeRequest) async throws -> BridgePacketSyncResult {
+        let body = try JSONCoding.encoder.encode(request)
+        let path = "/v1/packets/\(packetId.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? packetId)/ack"
+        let result = try await requestWithEndpointDescription(method: "POST", path: path, body: body)
+        return BridgePacketSyncResult(endpointDescription: result.endpointDescription)
     }
 
     private var bridgePort: NWEndpoint.Port {
@@ -110,21 +127,79 @@ final class BridgeClient {
         }
     }
 
+    private func request(method: String, path: String, body: Data?) async throws -> Data {
+        try await requestWithEndpointDescription(method: method, path: path, body: body).data
+    }
+
+    private func requestWithEndpointDescription(method: String, path: String, body: Data?) async throws -> (data: Data, endpointDescription: String) {
+        var tailnetErrors: [String] = []
+        for target in tailnetTargets {
+            do {
+                let endpoint = NWEndpoint.hostPort(host: NWEndpoint.Host(target.host), port: bridgePort)
+                let data = try await sendRequest(
+                    method: method,
+                    path: path,
+                    body: body,
+                    to: endpoint,
+                    hostHeader: "\(target.host):\(HealthBridgeConstants.port)"
+                )
+                return (data, "\(target.label)：\(target.host):\(HealthBridgeConstants.port)")
+            } catch {
+                tailnetErrors.append("\(target.label) \(target.host): \(error.localizedDescription)")
+            }
+        }
+
+        do {
+            let endpoint = try await discoverEndpoint()
+            let data = try await sendRequest(
+                method: method,
+                path: path,
+                body: body,
+                to: endpoint,
+                hostHeader: "health-agent-bridge"
+            )
+            return (data, "Bonjour：\(endpointDescription(for: endpoint))")
+        } catch let bonjourError {
+            throw BridgeClientError.allEndpointsFailed(
+                tailnet: tailnetErrors.joined(separator: "；"),
+                bonjour: bonjourError.localizedDescription
+            )
+        }
+    }
+
     private func send(body: Data, to endpoint: NWEndpoint, hostHeader: String, timeout: TimeInterval = 10) async throws {
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+        _ = try await sendRequest(
+            method: "POST",
+            path: HealthBridgeConstants.ingestPath,
+            body: body,
+            to: endpoint,
+            hostHeader: hostHeader,
+            timeout: timeout
+        )
+    }
+
+    private func sendRequest(
+        method: String,
+        path: String,
+        body: Data?,
+        to endpoint: NWEndpoint,
+        hostHeader: String,
+        timeout: TimeInterval = 10
+    ) async throws -> Data {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
             let connection = NWConnection(to: endpoint, using: .tcp)
             var didFinish = false
             var responseBuffer = Data()
             var timeoutWorkItem: DispatchWorkItem?
 
-            func finish(_ result: Result<Void, Error>) {
+            func finish(_ result: Result<Data, Error>) {
                 guard !didFinish else { return }
                 didFinish = true
                 timeoutWorkItem?.cancel()
                 connection.cancel()
                 switch result {
-                case .success:
-                    continuation.resume()
+                case .success(let data):
+                    continuation.resume(returning: data)
                 case .failure(let error):
                     continuation.resume(throwing: error)
                 }
@@ -141,14 +216,16 @@ final class BridgeClient {
                         responseBuffer.append(data)
                     }
 
-                    if let statusCode = HTTPClientResponse.statusCode(from: responseBuffer) {
+                    if let statusCode = HTTPClientResponse.statusCode(from: responseBuffer),
+                       let bodyData = HTTPClientResponse.bodyData(from: responseBuffer) {
                         if (200..<300).contains(statusCode) {
-                            finish(.success(()))
+                            finish(.success(bodyData))
                         } else {
-                            finish(.failure(BridgeClientError.sendFailed("Mac 返回 HTTP \(statusCode)")))
+                            let message = String(data: bodyData, encoding: .utf8) ?? "Mac 返回 HTTP \(statusCode)"
+                            finish(.failure(BridgeClientError.sendFailed(message)))
                         }
                     } else if isComplete {
-                        finish(.failure(BridgeClientError.invalidResponse("没有收到完整 HTTP 状态行")))
+                        finish(.failure(BridgeClientError.invalidResponse("没有收到完整 HTTP 响应")))
                     } else {
                         readResponse()
                     }
@@ -158,18 +235,19 @@ final class BridgeClient {
             connection.stateUpdateHandler = { state in
                 switch state {
                 case .ready:
+                    let requestBody = body ?? Data()
                     let requestHead = """
-                    POST \(HealthBridgeConstants.ingestPath) HTTP/1.1\r
+                    \(method) \(path) HTTP/1.1\r
                     Host: \(hostHeader)\r
                     Content-Type: application/json\r
                     Authorization: Bearer \(HealthBridgeConstants.sharedToken)\r
-                    Content-Length: \(body.count)\r
+                    Content-Length: \(requestBody.count)\r
                     Connection: close\r
                     \r
 
                     """
                     var payload = Data(requestHead.utf8)
-                    payload.append(body)
+                    payload.append(requestBody)
                     connection.send(content: payload, completion: .contentProcessed { error in
                         if let error {
                             finish(.failure(BridgeClientError.sendFailed(error.localizedDescription)))
@@ -215,11 +293,7 @@ final class BridgeClient {
 
 private enum HTTPClientResponse {
     static func statusCode(from data: Data) -> Int? {
-        guard let headerRange = data.range(of: Data("\r\n\r\n".utf8)) else {
-            return nil
-        }
-
-        let headerData = data[..<headerRange.lowerBound]
+        guard let headerData = headerData(from: data) else { return nil }
         guard let headerText = String(data: headerData, encoding: .utf8),
               let statusLine = headerText.components(separatedBy: "\r\n").first else {
             return nil
@@ -231,5 +305,46 @@ private enum HTTPClientResponse {
         }
 
         return Int(parts[1])
+    }
+
+    static func bodyData(from data: Data) -> Data? {
+        guard let headerRange = data.range(of: Data("\r\n\r\n".utf8)) else {
+            return nil
+        }
+
+        let bodyStart = headerRange.upperBound
+        let availableBodyLength = data.count - bodyStart
+        if let contentLength = contentLength(from: data), availableBodyLength < contentLength {
+            return nil
+        }
+
+        if let contentLength = contentLength(from: data) {
+            return Data(data[bodyStart..<(bodyStart + contentLength)])
+        }
+        return Data(data[bodyStart...])
+    }
+
+    private static func headerData(from data: Data) -> Data? {
+        guard let headerRange = data.range(of: Data("\r\n\r\n".utf8)) else {
+            return nil
+        }
+
+        return Data(data[..<headerRange.lowerBound])
+    }
+
+    private static func contentLength(from data: Data) -> Int? {
+        guard let headerData = headerData(from: data),
+              let headerText = String(data: headerData, encoding: .utf8) else {
+            return nil
+        }
+
+        for line in headerText.components(separatedBy: "\r\n").dropFirst() {
+            guard let separator = line.firstIndex(of: ":") else { continue }
+            let key = line[..<separator].trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+            guard key == "content-length" else { continue }
+            let value = line[line.index(after: separator)...].trimmingCharacters(in: .whitespacesAndNewlines)
+            return Int(value)
+        }
+        return nil
     }
 }

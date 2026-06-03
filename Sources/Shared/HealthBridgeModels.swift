@@ -41,6 +41,10 @@ struct DailyHealthSummary: Codable, Identifiable, Hashable {
     var date: String
     var stepCount: Double?
     var activeEnergyKilocalories: Double?
+    var dietaryEnergyKilocalories: Double?
+    var dietaryProteinGrams: Double?
+    var dietaryCarbohydratesGrams: Double?
+    var dietaryFatGrams: Double?
     var walkingRunningDistanceMeters: Double?
     var exerciseMinutes: Double?
     var heartRateAverageBPM: Double?
@@ -114,6 +118,128 @@ struct StoredHealthReport: Codable, Hashable {
     var receivedAt: Date
     var remoteAddress: String?
     var report: HealthReportEnvelope
+}
+
+enum HealthPacketType: String, Codable, Hashable {
+    case foodIntake = "food_intake"
+    case bodyWeight = "body_weight"
+}
+
+enum HealthPacketSource: String, Codable, Hashable {
+    case openClaw = "openclaw"
+    case iOSManual = "ios_manual"
+    case macAPI = "mac_api"
+}
+
+enum HealthPacketStatus: String, Codable, Hashable {
+    case pendingIOSSync = "pending_ios_sync"
+    case writtenToHealthKit = "written_to_healthkit"
+    case failed = "failed"
+    case cancelled = "cancelled"
+}
+
+enum HealthPacketConfidence: String, Codable, Hashable {
+    case low
+    case medium
+    case high
+}
+
+struct FoodItemEstimate: Codable, Identifiable, Hashable {
+    var id: UUID
+    var name: String
+    var amountDescription: String?
+    var estimatedCaloriesKcal: Double?
+    var proteinGrams: Double?
+    var carbohydrateGrams: Double?
+    var fatGrams: Double?
+
+    init(
+        id: UUID = UUID(),
+        name: String,
+        amountDescription: String? = nil,
+        estimatedCaloriesKcal: Double? = nil,
+        proteinGrams: Double? = nil,
+        carbohydrateGrams: Double? = nil,
+        fatGrams: Double? = nil
+    ) {
+        self.id = id
+        self.name = name
+        self.amountDescription = amountDescription
+        self.estimatedCaloriesKcal = estimatedCaloriesKcal
+        self.proteinGrams = proteinGrams
+        self.carbohydrateGrams = carbohydrateGrams
+        self.fatGrams = fatGrams
+    }
+}
+
+struct FoodIntakePayload: Codable, Hashable {
+    var occurredAt: Date
+    var mealType: String?
+    var rawText: String
+    var foodItems: [FoodItemEstimate]
+    var estimatedCaloriesKcal: Double
+    var proteinGrams: Double?
+    var carbohydrateGrams: Double?
+    var fatGrams: Double?
+    var confidence: HealthPacketConfidence
+    var estimationNotes: String?
+}
+
+struct BodyWeightPayload: Codable, Hashable {
+    var measuredAt: Date
+    var weightKilograms: Double
+    var rawText: String?
+    var note: String?
+}
+
+struct HealthPacket: Codable, Identifiable, Hashable {
+    var id: String { packetId }
+
+    var packetId: String
+    var type: HealthPacketType
+    var source: HealthPacketSource
+    var status: HealthPacketStatus
+    var createdAt: Date
+    var updatedAt: Date
+    var revision: Int
+    var healthKitObjectIds: [String]
+    var lastError: String?
+    var foodIntake: FoodIntakePayload?
+    var bodyWeight: BodyWeightPayload?
+
+    func withUpdatedStatus(
+        _ status: HealthPacketStatus,
+        healthKitObjectIds: [String]? = nil,
+        lastError: String? = nil,
+        updatedAt: Date = Date()
+    ) -> HealthPacket {
+        var copy = self
+        copy.status = status
+        copy.updatedAt = updatedAt
+        if let healthKitObjectIds {
+            copy.healthKitObjectIds = healthKitObjectIds
+        }
+        copy.lastError = lastError
+        return copy
+    }
+}
+
+struct HealthPacketCreateRequest: Codable, Hashable {
+    var type: HealthPacketType
+    var source: HealthPacketSource?
+    var packetId: String?
+    var foodIntake: FoodIntakePayload?
+    var bodyWeight: BodyWeightPayload?
+}
+
+struct HealthPacketAcknowledgeRequest: Codable, Hashable {
+    var status: HealthPacketStatus
+    var healthKitObjectIds: [String]?
+    var errorMessage: String?
+}
+
+struct HealthPacketListPayload: Codable, Hashable {
+    var packets: [HealthPacket]
 }
 
 enum JSONCoding {

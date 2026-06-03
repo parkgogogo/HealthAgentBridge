@@ -61,6 +61,11 @@ struct MacContentView: View {
                         .foregroundStyle(.secondary)
                     Text(controller.latestDeviceText)
                 }
+                GridRow {
+                    Text("Health Packet")
+                        .foregroundStyle(.secondary)
+                    Text(controller.packetQueueText)
+                }
             }
 
             Divider()

@@ -5,6 +5,7 @@ import UIKit
 enum HealthReporterError: LocalizedError {
     case healthDataUnavailable
     case unsupportedType(String)
+    case invalidPacket(String)
 
     var errorDescription: String? {
         switch self {
@@ -12,6 +13,8 @@ enum HealthReporterError: LocalizedError {
             return "这台设备不支持 HealthKit"
         case .unsupportedType(let type):
             return "不支持的健康数据类型：\(type)"
+        case .invalidPacket(let message):
+            return "Health Packet 无效：\(message)"
         }
     }
 }
@@ -92,7 +95,10 @@ final class HealthReporterService {
         }
 
         let types = try monitoredSampleTypes()
-        try await requestAuthorization(readTypes: Set(types))
+        try await requestAuthorization(
+            shareTypes: Set(try writableSampleTypes()),
+            readTypes: Set(types.map { $0 as HKObjectType })
+        )
         try await enableBackgroundDelivery(for: types)
         startObserverQueries(for: types)
     }
@@ -106,9 +112,9 @@ final class HealthReporterService {
         }
     }
 
-    private func requestAuthorization(readTypes: Set<HKObjectType>) async throws {
+    private func requestAuthorization(shareTypes: Set<HKSampleType>, readTypes: Set<HKObjectType>) async throws {
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            healthStore.requestAuthorization(toShare: nil, read: readTypes) { success, error in
+            healthStore.requestAuthorization(toShare: shareTypes, read: readTypes) { success, error in
                 if let error {
                     continuation.resume(throwing: error)
                 } else if success {
@@ -173,6 +179,7 @@ final class HealthReporterService {
             try await flushQueuedReports()
             let result = try await bridgeClient.upload(report)
             markSuccessfulUpload(result)
+            await syncPendingPacketsAndUploadRefresh()
         } catch {
             try? await uploadQueue.enqueue(report)
             recordUploadFailure(error)
@@ -192,6 +199,57 @@ final class HealthReporterService {
         defaults.set(Date(), forKey: lastSyncKey)
         defaults.set(result.endpointDescription, forKey: lastSyncEndpointKey)
         defaults.removeObject(forKey: lastUploadErrorKey)
+    }
+
+    private func syncPendingPacketsAndUploadRefresh() async {
+        do {
+            let writtenCount = try await syncPendingHealthPackets()
+            guard writtenCount > 0 else { return }
+            let refreshedReport = try await collectReport(reason: "packet-sync")
+            let result = try await bridgeClient.upload(refreshedReport)
+            markSuccessfulUpload(result)
+        } catch {
+            NSLog("HealthReporter packet sync failed: \(error.localizedDescription)")
+        }
+    }
+
+    private func syncPendingHealthPackets() async throws -> Int {
+        let packets = try await bridgeClient.fetchPendingPackets(limit: 50)
+        guard !packets.isEmpty else {
+            return 0
+        }
+
+        try await requestAuthorization(
+            shareTypes: Set(try writableSampleTypes()),
+            readTypes: Set(try monitoredSampleTypes().map { $0 as HKObjectType })
+        )
+
+        var writtenCount = 0
+        for packet in packets {
+            do {
+                let healthKitObjectIds = try await writePacketToHealthKit(packet)
+                _ = try await bridgeClient.acknowledgePacket(
+                    packetId: packet.packetId,
+                    request: HealthPacketAcknowledgeRequest(
+                        status: .writtenToHealthKit,
+                        healthKitObjectIds: healthKitObjectIds,
+                        errorMessage: nil
+                    )
+                )
+                writtenCount += 1
+            } catch {
+                _ = try? await bridgeClient.acknowledgePacket(
+                    packetId: packet.packetId,
+                    request: HealthPacketAcknowledgeRequest(
+                        status: .failed,
+                        healthKitObjectIds: nil,
+                        errorMessage: error.localizedDescription
+                    )
+                )
+            }
+        }
+
+        return writtenCount
     }
 
     private func recordUploadFailure(_ error: Error) {
@@ -218,6 +276,10 @@ final class HealthReporterService {
         let quantityIdentifiers: [HKQuantityTypeIdentifier] = [
             .stepCount,
             .activeEnergyBurned,
+            .dietaryEnergyConsumed,
+            .dietaryProtein,
+            .dietaryCarbohydrates,
+            .dietaryFatTotal,
             .distanceWalkingRunning,
             .appleExerciseTime,
             .heartRate,
@@ -240,6 +302,23 @@ final class HealthReporterService {
         return types
     }
 
+    private func writableSampleTypes() throws -> [HKQuantityType] {
+        let quantityIdentifiers: [HKQuantityTypeIdentifier] = [
+            .bodyMass,
+            .dietaryEnergyConsumed,
+            .dietaryProtein,
+            .dietaryCarbohydrates,
+            .dietaryFatTotal
+        ]
+
+        return try quantityIdentifiers.map { identifier in
+            guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
+                throw HealthReporterError.unsupportedType(identifier.rawValue)
+            }
+            return type
+        }
+    }
+
     private func collectDailySummaries(days: Int) async throws -> [DailyHealthSummary] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
@@ -257,6 +336,10 @@ final class HealthReporterService {
         let quantitySpecs: [(HKQuantityTypeIdentifier, HKUnit, HKStatisticsOptions)] = [
             (.stepCount, .count(), .cumulativeSum),
             (.activeEnergyBurned, .kilocalorie(), .cumulativeSum),
+            (.dietaryEnergyConsumed, .kilocalorie(), .cumulativeSum),
+            (.dietaryProtein, .gram(), .cumulativeSum),
+            (.dietaryCarbohydrates, .gram(), .cumulativeSum),
+            (.dietaryFatTotal, .gram(), .cumulativeSum),
             (.distanceWalkingRunning, .meter(), .cumulativeSum),
             (.appleExerciseTime, .minute(), .cumulativeSum),
             (.heartRate, HKUnit.count().unitDivided(by: .minute()), .discreteAverage),
@@ -280,6 +363,14 @@ final class HealthReporterService {
                     summary.stepCount = value
                 case .activeEnergyBurned:
                     summary.activeEnergyKilocalories = value
+                case .dietaryEnergyConsumed:
+                    summary.dietaryEnergyKilocalories = value
+                case .dietaryProtein:
+                    summary.dietaryProteinGrams = value
+                case .dietaryCarbohydrates:
+                    summary.dietaryCarbohydratesGrams = value
+                case .dietaryFatTotal:
+                    summary.dietaryFatGrams = value
                 case .distanceWalkingRunning:
                     summary.walkingRunningDistanceMeters = value
                 case .appleExerciseTime:
@@ -386,7 +477,11 @@ final class HealthReporterService {
         let specs: [(String, HKQuantityTypeIdentifier, HKUnit, String)] = [
             ("heartRate", .heartRate, HKUnit.count().unitDivided(by: .minute()), "count/min"),
             ("restingHeartRate", .restingHeartRate, HKUnit.count().unitDivided(by: .minute()), "count/min"),
-            ("bodyMass", .bodyMass, .gramUnit(with: .kilo), "kg")
+            ("bodyMass", .bodyMass, .gramUnit(with: .kilo), "kg"),
+            ("dietaryEnergyConsumed", .dietaryEnergyConsumed, .kilocalorie(), "kcal"),
+            ("dietaryProtein", .dietaryProtein, .gram(), "g"),
+            ("dietaryCarbohydrates", .dietaryCarbohydrates, .gram(), "g"),
+            ("dietaryFatTotal", .dietaryFatTotal, .gram(), "g")
         ]
 
         var output: [HealthSample] = []
@@ -479,6 +574,150 @@ final class HealthReporterService {
             return nil
         }
         return workout.statistics(for: type)?.sumQuantity()?.doubleValue(for: unit)
+    }
+
+    private func writePacketToHealthKit(_ packet: HealthPacket) async throws -> [String] {
+        switch packet.type {
+        case .bodyWeight:
+            return try await writeBodyWeightPacket(packet)
+        case .foodIntake:
+            return try await writeFoodIntakePacket(packet)
+        }
+    }
+
+    private func writeBodyWeightPacket(_ packet: HealthPacket) async throws -> [String] {
+        guard let payload = packet.bodyWeight else {
+            throw HealthReporterError.invalidPacket("bodyWeight payload is missing")
+        }
+        guard payload.weightKilograms > 0 else {
+            throw HealthReporterError.invalidPacket("bodyWeight.weightKilograms must be positive")
+        }
+        guard let type = HKObjectType.quantityType(forIdentifier: .bodyMass) else {
+            throw HealthReporterError.unsupportedType(HKQuantityTypeIdentifier.bodyMass.rawValue)
+        }
+
+        let sample = HKQuantitySample(
+            type: type,
+            quantity: HKQuantity(unit: .gramUnit(with: .kilo), doubleValue: payload.weightKilograms),
+            start: payload.measuredAt,
+            end: payload.measuredAt,
+            metadata: healthPacketMetadata(packet, label: payload.rawText ?? payload.note)
+        )
+
+        try await saveHealthObjects([sample])
+        return [sample.uuid.uuidString]
+    }
+
+    private func writeFoodIntakePacket(_ packet: HealthPacket) async throws -> [String] {
+        guard let payload = packet.foodIntake else {
+            throw HealthReporterError.invalidPacket("foodIntake payload is missing")
+        }
+        guard payload.estimatedCaloriesKcal > 0 else {
+            throw HealthReporterError.invalidPacket("foodIntake.estimatedCaloriesKcal must be positive")
+        }
+
+        var samples: [HKQuantitySample] = []
+        let metadata = healthPacketMetadata(packet, label: payload.rawText, mealType: payload.mealType)
+
+        try appendQuantitySample(
+            to: &samples,
+            identifier: .dietaryEnergyConsumed,
+            unit: .kilocalorie(),
+            value: payload.estimatedCaloriesKcal,
+            date: payload.occurredAt,
+            metadata: metadata
+        )
+        try appendQuantitySample(
+            to: &samples,
+            identifier: .dietaryProtein,
+            unit: .gram(),
+            value: payload.proteinGrams,
+            date: payload.occurredAt,
+            metadata: metadata
+        )
+        try appendQuantitySample(
+            to: &samples,
+            identifier: .dietaryCarbohydrates,
+            unit: .gram(),
+            value: payload.carbohydrateGrams,
+            date: payload.occurredAt,
+            metadata: metadata
+        )
+        try appendQuantitySample(
+            to: &samples,
+            identifier: .dietaryFatTotal,
+            unit: .gram(),
+            value: payload.fatGrams,
+            date: payload.occurredAt,
+            metadata: metadata
+        )
+
+        guard !samples.isEmpty else {
+            throw HealthReporterError.invalidPacket("foodIntake has no writable nutrition samples")
+        }
+
+        try await saveHealthObjects(samples)
+        return samples.map { $0.uuid.uuidString }
+    }
+
+    private func appendQuantitySample(
+        to samples: inout [HKQuantitySample],
+        identifier: HKQuantityTypeIdentifier,
+        unit: HKUnit,
+        value: Double?,
+        date: Date,
+        metadata: [String: Any]
+    ) throws {
+        guard let value, value > 0 else {
+            return
+        }
+        guard let type = HKObjectType.quantityType(forIdentifier: identifier) else {
+            throw HealthReporterError.unsupportedType(identifier.rawValue)
+        }
+
+        samples.append(
+            HKQuantitySample(
+                type: type,
+                quantity: HKQuantity(unit: unit, doubleValue: value),
+                start: date,
+                end: date,
+                metadata: metadata
+            )
+        )
+    }
+
+    private func healthPacketMetadata(_ packet: HealthPacket, label: String?, mealType: String? = nil) -> [String: Any] {
+        var metadata: [String: Any] = [
+            "DataTrackerPacketId": packet.packetId,
+            "DataTrackerPacketType": packet.type.rawValue,
+            "DataTrackerPacketRevision": packet.revision,
+            "DataTrackerPacketSource": packet.source.rawValue,
+            HKMetadataKeyWasUserEntered: true
+        ]
+
+        if let label, !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            metadata["DataTrackerRawText"] = label
+            metadata[HKMetadataKeyFoodType] = label
+        }
+        if let mealType, !mealType.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            metadata["DataTrackerMealType"] = mealType
+        }
+
+        return metadata
+    }
+
+    private func saveHealthObjects(_ objects: [HKObject]) async throws {
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            healthStore.save(objects) { success, error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else if success {
+                    continuation.resume()
+                } else {
+                    continuation.resume(throwing: HealthReporterError.healthDataUnavailable)
+                }
+            }
+        }
     }
 
     private func workoutActivityName(_ activityType: HKWorkoutActivityType) -> String {

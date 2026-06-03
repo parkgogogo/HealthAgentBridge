@@ -79,7 +79,8 @@ final class HealthBridgeHTTPServer {
         switch (request.method, request.path) {
         case ("GET", "/"), ("GET", "/v1/status"):
             let latest = await store.latestReport()
-            return .json(BridgeStatusPayload.make(from: latest))
+            let packets = await store.allPackets()
+            return .json(BridgeStatusPayload.make(from: latest, packets: packets))
 
         case ("GET", "/v1/summary/daily"):
             let summaries = await store.dailySummaries()
@@ -117,7 +118,27 @@ final class HealthBridgeHTTPServer {
 
             let days = request.boundedIntQuery("days", default: 14, min: 1, max: 365)
             let sampleLimit = request.boundedIntQuery("sampleLimit", default: 20, min: 0, max: 500)
-            return .json(AgentHealthContext.make(from: latest, days: days, sampleLimit: sampleLimit))
+            let packets = await store.allPackets()
+            return .json(AgentHealthContext.make(from: latest, packets: packets, days: days, sampleLimit: sampleLimit))
+
+        case ("POST", "/v1/packets"):
+            do {
+                let createRequest = try JSONCoding.decoder.decode(HealthPacketCreateRequest.self, from: request.body)
+                let packet = try await store.createPacket(createRequest)
+                return .json(packet)
+            } catch {
+                return .badRequest(message: error.localizedDescription)
+            }
+
+        case ("GET", "/v1/packets/pending"):
+            let limit = request.boundedIntQuery("limit", default: 50, min: 1, max: 200)
+            let packets = await store.pendingPackets(limit: limit)
+            return .json(HealthPacketListPayload(packets: packets))
+
+        case ("GET", "/v1/packets/recent"):
+            let limit = request.boundedIntQuery("limit", default: 50, min: 1, max: 500)
+            let packets = await store.recentPackets(limit: limit)
+            return .json(HealthPacketListPayload(packets: packets))
 
         case ("GET", "/openapi.json"), ("GET", "/v1/openapi.json"):
             return .json(OpenAPIDocument.make())
@@ -138,6 +159,16 @@ final class HealthBridgeHTTPServer {
             }
 
         default:
+            if request.method == "POST",
+               let packetId = request.path.packetIDAcknowledgementPathComponent {
+                do {
+                    let ackRequest = try JSONCoding.decoder.decode(HealthPacketAcknowledgeRequest.self, from: request.body)
+                    let packet = try await store.acknowledgePacket(packetId: packetId, request: ackRequest)
+                    return .json(packet)
+                } catch {
+                    return .badRequest(message: error.localizedDescription)
+                }
+            }
             return .notFound(message: "Unknown route")
         }
     }
@@ -295,8 +326,10 @@ private struct BridgeStatusPayload: Encodable {
     var latestGeneratedAgeSeconds: Int?
     var deviceName: String?
     var remoteAddress: String?
+    var pendingPacketCount: Int
+    var failedPacketCount: Int
 
-    static func make(from latest: StoredHealthReport?) -> BridgeStatusPayload {
+    static func make(from latest: StoredHealthReport?, packets: [HealthPacket] = []) -> BridgeStatusPayload {
         let now = Date()
         return BridgeStatusPayload(
             status: "ok",
@@ -312,7 +345,9 @@ private struct BridgeStatusPayload: Encodable {
             latestReceivedAgeSeconds: latest.map { Int(now.timeIntervalSince($0.receivedAt)) },
             latestGeneratedAgeSeconds: latest.map { Int(now.timeIntervalSince($0.report.generatedAt)) },
             deviceName: latest?.report.deviceName,
-            remoteAddress: latest?.remoteAddress
+            remoteAddress: latest?.remoteAddress,
+            pendingPacketCount: packets.filter { $0.status == .pendingIOSSync }.count,
+            failedPacketCount: packets.filter { $0.status == .failed }.count
         )
     }
 }
@@ -327,17 +362,20 @@ private struct AgentHealthContext: Encodable {
     var sampleTypes: [AgentSampleTypeSummary]
     var recentSamples: [HealthSample]
     var recentWorkouts: [HealthWorkout]
+    var pendingPackets: [HealthPacket]
+    var recentPackets: [HealthPacket]
     var availableEndpoints: [String: String]
     var agentNotes: [String]
 
-    static func make(from latest: StoredHealthReport, days: Int, sampleLimit: Int) -> AgentHealthContext {
+    static func make(from latest: StoredHealthReport, packets: [HealthPacket], days: Int, sampleLimit: Int) -> AgentHealthContext {
         let summaries = filteredDailySummaries(latest.report.dailySummaries, days: days)
         let todayString = DateFormatter.healthBridgeDay.string(from: Date())
         let today = summaries.last { $0.date == todayString }
         let latestCompleteDay = summaries.reversed().first { $0.date != todayString }
+        let recentPackets = Array(packets.sorted { $0.updatedAt > $1.updatedAt }.prefix(20))
 
         return AgentHealthContext(
-            status: BridgeStatusPayload.make(from: latest),
+            status: BridgeStatusPayload.make(from: latest, packets: packets),
             dataWindow: AgentDataWindow.make(requestedDays: days, summaries: summaries),
             today: today,
             latestCompleteDay: latestCompleteDay,
@@ -346,12 +384,17 @@ private struct AgentHealthContext: Encodable {
             sampleTypes: AgentSampleTypeSummary.make(from: latest.report.samples),
             recentSamples: makeRecentSamples(from: latest.report.samples, type: nil, limit: sampleLimit),
             recentWorkouts: makeRecentWorkouts(from: latest.report.workouts, days: days, limit: 100),
+            pendingPackets: packets.filter { $0.status == .pendingIOSSync },
+            recentPackets: recentPackets,
             availableEndpoints: [
                 "status": "\(HealthBridgeConstants.agentBaseURL)/v1/status",
                 "agentContext": "\(HealthBridgeConstants.agentBaseURL)/v1/agent/context?days=14&sampleLimit=20",
                 "dailySummaries": "\(HealthBridgeConstants.agentBaseURL)/v1/summary/daily?days=14",
                 "recentHeartRateSamples": "\(HealthBridgeConstants.agentBaseURL)/v1/samples/recent?type=heartRate&limit=50",
                 "recentWorkouts": "\(HealthBridgeConstants.agentBaseURL)/v1/workouts/recent?days=30&limit=100",
+                "createPacket": "\(HealthBridgeConstants.agentBaseURL)/v1/packets",
+                "pendingPackets": "\(HealthBridgeConstants.agentBaseURL)/v1/packets/pending",
+                "recentPackets": "\(HealthBridgeConstants.agentBaseURL)/v1/packets/recent",
                 "latestFullReport": "\(HealthBridgeConstants.agentBaseURL)/v1/report/latest",
                 "openapi": "\(HealthBridgeConstants.agentBaseURL)/v1/openapi.json"
             ],
@@ -388,6 +431,15 @@ private struct AgentHealthAggregates: Encodable {
     var averageDailyWalkingRunningDistanceKilometers: Double?
     var totalActiveEnergyKilocalories: Double?
     var averageDailyActiveEnergyKilocalories: Double?
+    var totalDietaryEnergyKilocalories: Double?
+    var averageDailyDietaryEnergyKilocalories: Double?
+    var totalDietaryProteinGrams: Double?
+    var averageDailyDietaryProteinGrams: Double?
+    var totalDietaryCarbohydratesGrams: Double?
+    var averageDailyDietaryCarbohydratesGrams: Double?
+    var totalDietaryFatGrams: Double?
+    var averageDailyDietaryFatGrams: Double?
+    var averageDailyDietaryMinusActiveEnergyKilocalories: Double?
     var totalExerciseMinutes: Double?
     var averageDailyExerciseMinutes: Double?
     var averageSleepHours: Double?
@@ -407,6 +459,15 @@ private struct AgentHealthAggregates: Encodable {
             averageDailyWalkingRunningDistanceKilometers: average(distanceMeters).map { $0 / 1_000 },
             totalActiveEnergyKilocalories: sum(summaries.map(\.activeEnergyKilocalories)),
             averageDailyActiveEnergyKilocalories: average(summaries.map(\.activeEnergyKilocalories)),
+            totalDietaryEnergyKilocalories: sum(summaries.map(\.dietaryEnergyKilocalories)),
+            averageDailyDietaryEnergyKilocalories: average(summaries.map(\.dietaryEnergyKilocalories)),
+            totalDietaryProteinGrams: sum(summaries.map(\.dietaryProteinGrams)),
+            averageDailyDietaryProteinGrams: average(summaries.map(\.dietaryProteinGrams)),
+            totalDietaryCarbohydratesGrams: sum(summaries.map(\.dietaryCarbohydratesGrams)),
+            averageDailyDietaryCarbohydratesGrams: average(summaries.map(\.dietaryCarbohydratesGrams)),
+            totalDietaryFatGrams: sum(summaries.map(\.dietaryFatGrams)),
+            averageDailyDietaryFatGrams: average(summaries.map(\.dietaryFatGrams)),
+            averageDailyDietaryMinusActiveEnergyKilocalories: dietaryMinusActiveEnergyAverage(from: summaries),
             totalExerciseMinutes: sum(summaries.map(\.exerciseMinutes)),
             averageDailyExerciseMinutes: average(summaries.map(\.exerciseMinutes)),
             averageSleepHours: average(sleepMinutes).map { $0 / 60 },
@@ -503,6 +564,20 @@ private func latestNonNil(_ values: [Double?]) -> Double? {
     values.reversed().compactMap { $0 }.first
 }
 
+private func dietaryMinusActiveEnergyAverage(from summaries: [DailyHealthSummary]) -> Double? {
+    let balances = summaries.compactMap { summary -> Double? in
+        guard let dietary = summary.dietaryEnergyKilocalories,
+              let active = summary.activeEnergyKilocalories else {
+            return nil
+        }
+        return dietary - active
+    }
+    guard !balances.isEmpty else {
+        return nil
+    }
+    return balances.reduce(0, +) / Double(balances.count)
+}
+
 private struct OpenAPIDocument: Encodable {
     var openapi: String
     var info: [String: String]
@@ -526,9 +601,31 @@ private struct OpenAPIDocument: Encodable {
                 "/v1/samples/recent": ["get": Endpoint(summary: "Return recent raw samples sorted by newest first. Query: type, limit")],
                 "/v1/workouts/recent": ["get": Endpoint(summary: "Return recent workouts sorted by newest first. Query: days, limit")],
                 "/v1/report/latest": ["get": Endpoint(summary: "Return the latest full health report")],
-                "/v1/ingest": ["post": Endpoint(summary: "Receive a health report from the paired iPhone app")]
+                "/v1/ingest": ["post": Endpoint(summary: "Receive a health report from the paired iPhone app")],
+                "/v1/packets": ["post": Endpoint(summary: "Create a Health Packet for iOS to write into Apple Health")],
+                "/v1/packets/pending": ["get": Endpoint(summary: "Return pending Health Packets for iOS sync")],
+                "/v1/packets/recent": ["get": Endpoint(summary: "Return recently updated Health Packets")],
+                "/v1/packets/{packetId}/ack": ["post": Endpoint(summary: "Acknowledge a packet write result from iOS")]
             ]
         )
+    }
+}
+
+private extension String {
+    var packetIDAcknowledgementPathComponent: String? {
+        let prefix = "/v1/packets/"
+        let suffix = "/ack"
+        guard hasPrefix(prefix), hasSuffix(suffix) else {
+            return nil
+        }
+
+        let start = index(startIndex, offsetBy: prefix.count)
+        let end = index(endIndex, offsetBy: -suffix.count)
+        guard start < end else {
+            return nil
+        }
+
+        return String(self[start..<end]).removingPercentEncoding
     }
 }
 
