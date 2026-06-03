@@ -15,28 +15,47 @@ private enum DataTrackerStyle {
     static let separator = Color.white.opacity(0.10)
 }
 
+private enum DataTrackerTab: Hashable {
+    case workout
+    case calorie
+    case status
+
+    var accentColor: Color {
+        switch self {
+        case .workout, .status:
+            return DataTrackerStyle.orange
+        case .calorie:
+            return DataTrackerStyle.green
+        }
+    }
+}
+
 struct ContentView: View {
     @StateObject private var viewModel = HealthReporterViewModel()
+    @State private var selectedTab: DataTrackerTab = .workout
     private let refreshTimer = Timer.publish(every: 30, on: .main, in: .common).autoconnect()
 
     var body: some View {
-        TabView {
+        TabView(selection: $selectedTab) {
             WorkoutDashboardTab(viewModel: viewModel)
                 .tabItem {
                     Label("运动", systemImage: "figure.run")
                 }
+                .tag(DataTrackerTab.workout)
 
             CalorieDashboardTab(viewModel: viewModel)
                 .tabItem {
                     Label("热量", systemImage: "flame.fill")
                 }
+                .tag(DataTrackerTab.calorie)
 
             StatusTab(viewModel: viewModel)
                 .tabItem {
                     Label("状态", systemImage: "checkmark.circle.fill")
                 }
+                .tag(DataTrackerTab.status)
         }
-        .tint(DataTrackerStyle.orange)
+        .tint(selectedTab.accentColor)
         .task {
             await viewModel.load()
         }
