@@ -78,6 +78,14 @@ final class HealthReporterService {
         await uploadQueue.count()
     }
 
+    func recentWorkoutsForDisplay(days: Int, limit: Int) async throws -> [HealthWorkout] {
+        guard HKHealthStore.isHealthDataAvailable() else {
+            throw HealthReporterError.healthDataUnavailable
+        }
+
+        return try await collectRecentWorkouts(days: days, limit: limit)
+    }
+
     private func startReporting() async throws {
         guard HKHealthStore.isHealthDataAvailable() else {
             throw HealthReporterError.healthDataUnavailable

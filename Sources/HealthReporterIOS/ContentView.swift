@@ -1,3 +1,4 @@
+import Charts
 import SwiftUI
 
 struct ContentView: View {
@@ -6,19 +7,14 @@ struct ContentView: View {
 
     var body: some View {
         TabView {
-            ReportingTab(viewModel: viewModel)
+            WorkoutTab(viewModel: viewModel)
                 .tabItem {
-                    Label("上报", systemImage: "heart.fill")
+                    Label("运动", systemImage: "chart.bar.fill")
                 }
 
             StatusTab(viewModel: viewModel)
                 .tabItem {
                     Label("状态", systemImage: "checkmark.circle.fill")
-                }
-
-            BridgeAPITab()
-                .tabItem {
-                    Label("接口", systemImage: "terminal.fill")
                 }
         }
         .task {
@@ -27,12 +23,48 @@ struct ContentView: View {
         .onReceive(refreshTimer) { _ in
             Task {
                 await viewModel.refreshDisplay()
+                await viewModel.refreshWorkoutChart()
             }
         }
     }
 }
 
-private struct ReportingTab: View {
+private struct WorkoutTab: View {
+    @ObservedObject var viewModel: HealthReporterViewModel
+
+    var body: some View {
+        Form {
+            Section("Workout 卡路里") {
+                if viewModel.hasWorkoutCalories {
+                    Chart(viewModel.workoutCalories) { point in
+                        BarMark(
+                            x: .value("日期", point.date, unit: .day),
+                            y: .value("卡路里", point.kilocalories)
+                        )
+                        .foregroundStyle(.green)
+                    }
+                    .frame(height: 220)
+                } else {
+                    ContentUnavailableView(
+                        "暂无图表数据",
+                        systemImage: "chart.bar",
+                        description: Text(viewModel.workoutChartMessage ?? "最近 30 天没有 workout 卡路里")
+                    )
+                    .frame(minHeight: 220)
+                }
+            }
+
+            Section("30 天概览") {
+                LabeledContent("总消耗", value: viewModel.workoutCaloriesTotalText)
+                LabeledContent("训练次数", value: viewModel.workoutCountText)
+                LabeledContent("活跃天数", value: viewModel.workoutActiveDaysText)
+                DetailTextRow(title: "最近训练", text: viewModel.latestWorkoutText)
+            }
+        }
+    }
+}
+
+private struct StatusTab: View {
     @ObservedObject var viewModel: HealthReporterViewModel
 
     var body: some View {
@@ -44,19 +76,6 @@ private struct ReportingTab: View {
                 ))
             }
 
-            Section("同步概览") {
-                LabeledContent("最近成功上报", value: viewModel.lastSyncText)
-                LabeledContent("待补发", value: viewModel.queuedText)
-            }
-        }
-    }
-}
-
-private struct StatusTab: View {
-    @ObservedObject var viewModel: HealthReporterViewModel
-
-    var body: some View {
-        Form {
             Section("运行状态") {
                 LabeledContent("状态", value: viewModel.statusText)
                 LabeledContent("最近成功上报", value: viewModel.lastSyncText)
@@ -73,43 +92,6 @@ private struct StatusTab: View {
                 } else {
                     LabeledContent("最近错误", value: "无")
                 }
-            }
-        }
-    }
-}
-
-private struct BridgeAPITab: View {
-    var body: some View {
-        Form {
-            Section("Mac Agent") {
-                DetailTextRow(
-                    title: "Mac 本机",
-                    text: "http://127.0.0.1:\(HealthBridgeConstants.port)/v1/agent/context"
-                )
-                DetailTextRow(
-                    title: "Tailscale",
-                    text: "http://\(HealthBridgeConstants.tailnetHost):\(HealthBridgeConstants.port)/v1/agent/context"
-                )
-            }
-
-            Section("常用接口") {
-                DetailTextRow(
-                    title: "每日汇总",
-                    text: "http://127.0.0.1:\(HealthBridgeConstants.port)/v1/summary/daily?days=14"
-                )
-                DetailTextRow(
-                    title: "最近样本",
-                    text: "http://127.0.0.1:\(HealthBridgeConstants.port)/v1/samples/recent?type=heartRate&limit=50"
-                )
-                DetailTextRow(
-                    title: "体能训练",
-                    text: "http://127.0.0.1:\(HealthBridgeConstants.port)/v1/workouts/recent?days=30&limit=100"
-                )
-            }
-
-            Section("手机上报") {
-                DetailTextRow(title: "MagicDNS", text: HealthBridgeConstants.tailnetIngestURL)
-                DetailTextRow(title: "备用 IPv4", text: HealthBridgeConstants.tailnetIPv4IngestURL)
             }
         }
     }
