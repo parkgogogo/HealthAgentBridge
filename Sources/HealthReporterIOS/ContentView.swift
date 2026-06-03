@@ -247,7 +247,7 @@ private struct WorkoutHeatmapGrid: View {
                                         .stroke(.white.opacity(0.78), lineWidth: 1.5)
                                 }
                             }
-                            .frame(height: 16)
+                            .aspectRatio(1, contentMode: .fit)
                             .contentShape(Rectangle())
                     }
                     .buttonStyle(.plain)
