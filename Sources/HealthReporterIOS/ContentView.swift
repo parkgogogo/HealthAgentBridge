@@ -78,14 +78,11 @@ private struct WorkoutDashboardTab: View {
                 VStack(alignment: .leading, spacing: 18) {
                     DashboardHeader(syncBadgeText: viewModel.syncBadgeText)
 
-                    CaloriesHeroCard(
-                        totalText: viewModel.workoutCaloriesTotalText,
-                        dailyAverageText: viewModel.workoutDailyAverageText
-                    )
+                    ActiveEnergyCarousel(cards: viewModel.activeEnergyCards)
 
                     HStack(spacing: 12) {
                         MetricTile(title: "7 天训练", value: viewModel.workoutCountText, systemImage: "figure.run")
-                        MetricTile(title: "7 天活动", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
+                        MetricTile(title: "7 天运动", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
                     }
 
                     WorkoutChartCard(viewModel: viewModel)
@@ -171,9 +168,27 @@ private struct DashboardHeader: View {
     }
 }
 
-private struct CaloriesHeroCard: View {
-    let totalText: String
-    let dailyAverageText: String
+private struct ActiveEnergyCarousel: View {
+    let cards: [ActiveEnergySummaryCard]
+
+    var body: some View {
+        ScrollView(.horizontal) {
+            HStack(spacing: 12) {
+                ForEach(cards) { card in
+                    ActiveEnergyHeroCard(card: card)
+                        .containerRelativeFrame(.horizontal)
+                }
+            }
+            .scrollTargetLayout()
+        }
+        .scrollIndicators(.hidden)
+        .scrollTargetBehavior(.viewAligned)
+        .frame(height: 172)
+    }
+}
+
+private struct ActiveEnergyHeroCard: View {
+    let card: ActiveEnergySummaryCard
 
     var body: some View {
         ZStack(alignment: .trailing) {
@@ -199,17 +214,17 @@ private struct CaloriesHeroCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("最近 7 天活动消耗")
+                    Text(card.title)
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.90))
 
                 VStack(alignment: .leading, spacing: 6) {
-                    Text(totalText)
+                    Text(card.totalText)
                         .font(.system(size: 46, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.78)
-                    Text("日均 \(dailyAverageText) · 50 天活动热力图")
+                    Text(card.detailText)
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.78))
                 }
@@ -312,7 +327,7 @@ private struct WorkoutChartCard: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Active Energy")
+                    Text("Workout Calories")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(viewModel.workoutSelectedDayText)
@@ -338,7 +353,7 @@ private struct WorkoutChartCard: View {
                     }
                 )
             } else {
-                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 50 天没有活动消耗")
+                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 50 天没有 workout 热量")
                     .frame(height: 132)
             }
         }
