@@ -66,11 +66,20 @@ struct DataTrackerWidgetView: View {
                     .font(.system(size: 10.5, weight: .medium, design: .rounded))
                     .foregroundStyle(labelColor)
                     .monospacedDigit()
-                Text("剩余 \(daysLeft) 天 · 训练 \(workoutDaysThisYear) 天")
-                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
-                    .foregroundStyle(labelColor)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
+                HStack(spacing: 5) {
+                    Text("剩余 \(daysLeft) 天")
+                    Text("·")
+                        .foregroundStyle(labelColor.opacity(0.72))
+                    Image(systemName: "flame.fill")
+                        .font(.system(size: 9.5, weight: .semibold))
+                        .foregroundStyle(accent.opacity(0.82))
+                    Text("\(todayActiveKilocalories) 卡")
+                        .monospacedDigit()
+                }
+                .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                .foregroundStyle(labelColor)
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -112,10 +121,6 @@ struct DataTrackerWidgetView: View {
 
     private var workoutDays: Set<String> {
         Set(entry.metrics.workoutDayIDs)
-    }
-
-    private var workoutDaysThisYear: Int {
-        workoutDays.intersection(Set(yearDays.map { DateFormatter.healthBridgeDay.string(from: $0) })).count
     }
 
     private var yearDays: [Date] {
@@ -171,6 +176,10 @@ struct DataTrackerWidgetView: View {
             return 0
         }
         return max(0, calendar.dateComponents([.day], from: tomorrow, to: nextYearStart).day ?? 0)
+    }
+
+    private var todayActiveKilocalories: Int {
+        max(0, Int(entry.metrics.activeEnergyKilocalories.rounded()))
     }
 
     private var accent: Color {
