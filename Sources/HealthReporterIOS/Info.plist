@@ -26,6 +26,8 @@
 	<string>$(HEALTH_BRIDGE_TAILNET_HOST)</string>
 	<key>HealthBridgeTailnetIPv4</key>
 	<string>$(HEALTH_BRIDGE_TAILNET_IPV4)</string>
+	<key>HealthReporterAppGroup</key>
+	<string>$(HEALTH_REPORTER_APP_GROUP)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSBonjourServices</key>

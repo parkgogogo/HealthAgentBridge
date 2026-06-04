@@ -4,6 +4,8 @@ HEALTH_BRIDGE_TAILNET_IPV4 = 100.64.0.1
 HEALTH_BRIDGE_SHARED_TOKEN = replace-with-a-random-token
 HEALTH_BRIDGE_DEVELOPMENT_TEAM =
 HEALTH_REPORTER_BUNDLE_IDENTIFIER = com.example.HealthReporter
+HEALTH_REPORTER_WIDGET_BUNDLE_IDENTIFIER = com.example.HealthReporter.DataTrackerWidgetExtension
+HEALTH_REPORTER_APP_GROUP = group.com.example.HealthReporter
 HEALTH_BRIDGE_MAC_BUNDLE_IDENTIFIER = com.example.HealthBridgeMac
 
 #include? "Local.xcconfig"

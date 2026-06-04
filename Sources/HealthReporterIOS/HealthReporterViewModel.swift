@@ -1,4 +1,7 @@
 import Foundation
+#if canImport(WidgetKit)
+import WidgetKit
+#endif
 
 struct WorkoutCaloriesPoint: Identifiable, Hashable {
     var id: String
@@ -201,6 +204,7 @@ final class HealthReporterViewModel: ObservableObject {
             async let summariesTask = service.dailySummariesForDisplay(days: workoutChartDays)
             async let workoutsTask = service.recentWorkoutsForDisplay(days: workoutChartDays, limit: 100)
             let (summaries, workouts) = try await (summariesTask, workoutsTask)
+            updateWidgetMetrics(from: summaries)
             let points = makeWorkoutCaloriesPoints(from: workouts)
             let chartTotal = points.reduce(0) { $0 + $1.kilocalories }
             let chartActiveDays = points.filter { $0.kilocalories > 0 }.count
@@ -252,6 +256,7 @@ final class HealthReporterViewModel: ObservableObject {
             async let summariesTask = service.dailySummariesForDisplay(days: nutritionChartDays)
             async let packetsTask = service.recentHealthPacketsForDisplay(limit: 100)
             let (summaries, packets) = try await (summariesTask, packetsTask)
+            updateWidgetMetrics(from: summaries)
             let caloriePoints = makeCalorieIntakePoints(from: summaries)
             let summaryPoints = Array(caloriePoints.suffix(nutritionSummaryDays))
             let trackedSummaryPoints = summaryPoints.compactMap(\.kilocalories)
@@ -356,6 +361,13 @@ final class HealthReporterViewModel: ObservableObject {
         } else {
             statusText = "未开启"
         }
+    }
+
+    private func updateWidgetMetrics(from summaries: [DailyHealthSummary]) {
+        WidgetMetricsStore.saveDailySummaries(summaries)
+#if canImport(WidgetKit)
+        WidgetCenter.shared.reloadTimelines(ofKind: DataTrackerWidgetKind.healthSummary)
+#endif
     }
 
     private func makeWorkoutCaloriesPoints(from workouts: [HealthWorkout]) -> [WorkoutCaloriesPoint] {
