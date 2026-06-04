@@ -50,33 +50,33 @@ struct DataTrackerWidgetView: View {
     let entry: DataTrackerWidgetEntry
 
     private let columns = 23
-    private let dotSize: CGFloat = 3.1
-    private let dotSpacing: CGFloat = 2.0
+    private let dotSize: CGFloat = 3.0
+    private let dotSpacing: CGFloat = 2.35
 
     var body: some View {
-        VStack(spacing: 10) {
+        VStack(spacing: 13) {
             dotGrid
 
-            VStack(spacing: 2) {
+            VStack(spacing: 3) {
                 Text("\(year)")
-                    .font(.system(size: 22, weight: .regular, design: .rounded))
-                    .foregroundStyle(accent)
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(labelColor)
                     .monospacedDigit()
                 Text("剩余 \(daysLeft) 天 · 训练 \(workoutDaysThisYear) 天")
-                    .font(.system(size: 11, weight: .medium))
-                    .foregroundStyle(accent.opacity(0.92))
+                    .font(.system(size: 10.5, weight: .medium, design: .rounded))
+                    .foregroundStyle(labelColor)
                     .lineLimit(1)
                     .minimumScaleFactor(0.72)
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 11)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 7)
+        .padding(.vertical, 13)
         .containerBackground(for: .widget) {
             LinearGradient(
                 colors: [
-                    Color(red: 1.00, green: 0.99, blue: 0.97),
-                    Color(red: 0.96, green: 0.95, blue: 0.93)
+                    Color(red: 1.00, green: 1.00, blue: 0.995),
+                    Color(red: 0.985, green: 0.982, blue: 0.975)
                 ],
                 startPoint: .topLeading,
                 endPoint: .bottomTrailing
@@ -137,6 +137,10 @@ struct DataTrackerWidgetView: View {
 
     private var accent: Color {
         Color(red: 1.00, green: 0.47, blue: 0.10)
+    }
+
+    private var labelColor: Color {
+        accent.opacity(0.68)
     }
 
     private func color(for day: Date) -> Color {
