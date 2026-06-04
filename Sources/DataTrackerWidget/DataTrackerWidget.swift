@@ -49,12 +49,13 @@ struct DataTrackerWidgetProvider: TimelineProvider {
 struct DataTrackerWidgetView: View {
     let entry: DataTrackerWidgetEntry
 
-    private let columns = 23
-    private let dotSize: CGFloat = 3.0
-    private let dotSpacing: CGFloat = 2.35
+    private let columns = 28
+    private let dotSize: CGFloat = 2.1
+    private let dotHorizontalSpacing: CGFloat = 3.15
+    private let dotVerticalSpacing: CGFloat = 3.65
 
     var body: some View {
-        VStack(spacing: 13) {
+        VStack(spacing: 15) {
             dotGrid
 
             VStack(spacing: 3) {
@@ -70,7 +71,7 @@ struct DataTrackerWidgetView: View {
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, 7)
+        .padding(.horizontal, 4)
         .padding(.vertical, 13)
         .containerBackground(for: .widget) {
             LinearGradient(
@@ -86,9 +87,9 @@ struct DataTrackerWidgetView: View {
 
     private var dotGrid: some View {
         LazyVGrid(
-            columns: Array(repeating: GridItem(.fixed(dotSize), spacing: dotSpacing), count: columns),
+            columns: Array(repeating: GridItem(.fixed(dotSize), spacing: dotHorizontalSpacing), count: columns),
             alignment: .center,
-            spacing: dotSpacing
+            spacing: dotVerticalSpacing
         ) {
             ForEach(yearDays, id: \.self) { day in
                 Circle()
