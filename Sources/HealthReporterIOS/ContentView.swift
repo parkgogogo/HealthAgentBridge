@@ -327,7 +327,7 @@ private struct WorkoutChartCard: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Workout Calories")
+                    Text("训练消耗")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(viewModel.workoutSelectedDayText)
@@ -598,7 +598,7 @@ private struct CalorieIntakeChartCard: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Daily Intake")
+                    Text("每日摄入")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(viewModel.calorieSelectedDayText)
