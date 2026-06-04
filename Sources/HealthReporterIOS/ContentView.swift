@@ -45,7 +45,7 @@ struct ContentView: View {
 
             CalorieDashboardTab(viewModel: viewModel)
                 .tabItem {
-                    Label("热量", systemImage: "flame.fill")
+                    Label("饮食", systemImage: "fork.knife")
                 }
                 .tag(DataTrackerTab.calorie)
 
@@ -263,7 +263,7 @@ private struct CalorieIntakeHeroCard: View {
 
             VStack(alignment: .leading, spacing: 20) {
                 HStack(spacing: 10) {
-                    Image(systemName: "flame.fill")
+                    Image(systemName: "fork.knife")
                         .font(.system(size: 14, weight: .bold))
                     Text("最近 7 天摄入")
                         .font(.system(size: 16, weight: .semibold))
