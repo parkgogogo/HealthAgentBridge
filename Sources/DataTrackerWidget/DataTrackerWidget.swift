@@ -53,6 +53,7 @@ struct DataTrackerWidgetView: View {
 
     private let columns = 28
     private let dotPixels: CGFloat = 6
+    private let completedDotPixels: CGFloat = 7
     private let dotHorizontalGapPixels: CGFloat = 10
     private let dotVerticalGapPixels: CGFloat = 12
 
@@ -94,11 +95,12 @@ struct DataTrackerWidgetView: View {
             for (index, day) in yearDays.enumerated() {
                 let row = index / columns
                 let column = index % columns
+                let size = dotSize(for: day)
                 let rect = CGRect(
-                    x: startX + CGFloat(column) * (dotSize + dotHorizontalSpacing),
-                    y: CGFloat(row) * (dotSize + dotVerticalSpacing),
-                    width: dotSize,
-                    height: dotSize
+                    x: startX + CGFloat(column) * (dotSize + dotHorizontalSpacing) + (dotSize - size) / 2,
+                    y: CGFloat(row) * (dotSize + dotVerticalSpacing) + (dotSize - size) / 2,
+                    width: size,
+                    height: size
                 )
                 context.fill(Path(ellipseIn: rect), with: .color(color(for: day)))
             }
@@ -135,6 +137,10 @@ struct DataTrackerWidgetView: View {
 
     private var dotSize: CGFloat {
         dotPixels / displayScale
+    }
+
+    private var completedDotSize: CGFloat {
+        completedDotPixels / displayScale
     }
 
     private var dotHorizontalSpacing: CGFloat {
@@ -190,6 +196,12 @@ struct DataTrackerWidgetView: View {
         }
 
         return Color(red: 0.95, green: 0.85, blue: 0.75)
+    }
+
+    private func dotSize(for day: Date) -> CGFloat {
+        let dayStart = Calendar.current.startOfDay(for: day)
+        let id = DateFormatter.healthBridgeDay.string(from: dayStart)
+        return workoutDays.contains(id) ? completedDotSize : dotSize
     }
 
     private func pixelAligned(_ value: CGFloat) -> CGFloat {
