@@ -183,8 +183,10 @@ final class HealthReporterViewModel: ObservableObject {
         }
 
         do {
-            let workouts = try await service.recentWorkoutsForDisplay(days: workoutChartDays, limit: 100)
-            let points = makeWorkoutCaloriesPoints(from: workouts)
+            async let summariesTask = service.dailySummariesForDisplay(days: workoutChartDays)
+            async let workoutsTask = service.recentWorkoutsForDisplay(days: workoutChartDays, limit: 100)
+            let (summaries, workouts) = try await (summariesTask, workoutsTask)
+            let points = makeWorkoutCaloriesPoints(from: summaries)
             let chartTotal = points.reduce(0) { $0 + $1.kilocalories }
             let chartActiveDays = points.filter { $0.kilocalories > 0 }.count
             let summaryPoints = workoutSummaryPoints(from: points)
@@ -196,12 +198,12 @@ final class HealthReporterViewModel: ObservableObject {
                 ?? points.filter { $0.kilocalories > 0 }.max { $0.date < $1.date }
 
             workoutCalories = points
-            workoutChartMessage = chartTotal > 0 ? nil : "最近 \(workoutChartDays) 天没有可展示的 workout 卡路里"
+            workoutChartMessage = chartTotal > 0 ? nil : "最近 \(workoutChartDays) 天没有可展示的活动消耗"
             workoutCaloriesTotalText = formatCalories(summaryTotal)
             workoutCountText = "\(summaryWorkouts.count) 次"
             workoutActiveDaysText = "\(summaryActiveDays) 天"
             workoutDailyAverageText = formatCalories(summaryTotal / Double(workoutSummaryDays))
-            updateSelectedWorkoutPoint(highlightedPoint, reason: highlightedPoint?.kilocalories ?? 0 > 0 ? "最近训练日" : "已选择")
+            updateSelectedWorkoutPoint(highlightedPoint, reason: highlightedPoint?.kilocalories ?? 0 > 0 ? "最近活动日" : "已选择")
             workoutChartAverageKilocalories = chartActiveDays > 0 ? chartTotal / Double(chartActiveDays) : 0
             allWorkoutRows = makeWorkoutRows(from: workouts)
             recentWorkoutRows = Array(allWorkoutRows.prefix(3))
@@ -266,7 +268,7 @@ final class HealthReporterViewModel: ObservableObject {
     }
 
     func selectWorkoutDay(_ point: WorkoutCaloriesPoint) {
-        updateSelectedWorkoutPoint(point, reason: point.kilocalories > 0 ? "已选择" : "无 workout")
+        updateSelectedWorkoutPoint(point, reason: point.kilocalories > 0 ? "已选择" : "无活动消耗")
     }
 
     func selectCalorieDay(_ point: CalorieIntakePoint) {
@@ -339,23 +341,23 @@ final class HealthReporterViewModel: ObservableObject {
         }
     }
 
-    private func makeWorkoutCaloriesPoints(from workouts: [HealthWorkout]) -> [WorkoutCaloriesPoint] {
+    private func makeWorkoutCaloriesPoints(from summaries: [DailyHealthSummary]) -> [WorkoutCaloriesPoint] {
         let calendar = Calendar.current
         let today = calendar.startOfDay(for: Date())
         guard let startDate = calendar.date(byAdding: .day, value: -(workoutChartDays - 1), to: today) else {
             return []
         }
 
+        var summariesByDay: [String: DailyHealthSummary] = [:]
+        for summary in summaries {
+            summariesByDay[summary.date] = summary
+        }
+
         var totalsByDay: [Date: Double] = [:]
         for dayOffset in 0..<workoutChartDays {
             guard let day = calendar.date(byAdding: .day, value: dayOffset, to: startDate) else { continue }
-            totalsByDay[day] = 0
-        }
-
-        for workout in workouts {
-            let day = calendar.startOfDay(for: workout.startDate)
-            guard day >= startDate, day <= today else { continue }
-            totalsByDay[day, default: 0] += workout.totalEnergyBurnedKilocalories ?? 0
+            let id = DateFormatter.healthBridgeDay.string(from: day)
+            totalsByDay[day] = summariesByDay[id]?.activeEnergyKilocalories ?? 0
         }
 
         return totalsByDay

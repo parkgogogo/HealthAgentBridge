@@ -85,7 +85,7 @@ private struct WorkoutDashboardTab: View {
 
                     HStack(spacing: 12) {
                         MetricTile(title: "7 天训练", value: viewModel.workoutCountText, systemImage: "figure.run")
-                        MetricTile(title: "7 天活跃", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
+                        MetricTile(title: "7 天活动", value: viewModel.workoutActiveDaysText, systemImage: "bolt.heart.fill")
                     }
 
                     WorkoutChartCard(viewModel: viewModel)
@@ -199,7 +199,7 @@ private struct CaloriesHeroCard: View {
                 HStack(spacing: 10) {
                     Image(systemName: "bolt.heart.fill")
                         .font(.system(size: 14, weight: .bold))
-                    Text("最近 7 天总消耗")
+                    Text("最近 7 天活动消耗")
                         .font(.system(size: 16, weight: .semibold))
                 }
                 .foregroundStyle(.white.opacity(0.90))
@@ -209,7 +209,7 @@ private struct CaloriesHeroCard: View {
                         .font(.system(size: 46, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                         .minimumScaleFactor(0.78)
-                    Text("日均 \(dailyAverageText) · 50 天热力图")
+                    Text("日均 \(dailyAverageText) · 50 天活动热力图")
                         .font(.system(size: 15, weight: .medium))
                         .foregroundStyle(.white.opacity(0.78))
                 }
@@ -312,7 +312,7 @@ private struct WorkoutChartCard: View {
         VStack(alignment: .leading, spacing: 18) {
             HStack(alignment: .top) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Calories Burnt")
+                    Text("Active Energy")
                         .font(.system(size: 18, weight: .bold, design: .rounded))
                         .foregroundStyle(.white)
                     Text(viewModel.workoutSelectedDayText)
@@ -338,7 +338,7 @@ private struct WorkoutChartCard: View {
                     }
                 )
             } else {
-                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 50 天没有 workout 卡路里")
+                EmptyChartState(message: viewModel.workoutChartMessage ?? "最近 50 天没有活动消耗")
                     .frame(height: 132)
             }
         }
