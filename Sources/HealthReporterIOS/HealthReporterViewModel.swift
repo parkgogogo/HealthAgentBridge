@@ -203,8 +203,9 @@ final class HealthReporterViewModel: ObservableObject {
         do {
             async let summariesTask = service.dailySummariesForDisplay(days: workoutChartDays)
             async let workoutsTask = service.recentWorkoutsForDisplay(days: workoutChartDays, limit: 100)
-            let (summaries, workouts) = try await (summariesTask, workoutsTask)
-            updateWidgetMetrics(from: summaries)
+            async let widgetWorkoutsTask = service.recentWorkoutsForDisplay(days: currentYearElapsedDays(), limit: 500)
+            let (summaries, workouts, widgetWorkouts) = try await (summariesTask, workoutsTask, widgetWorkoutsTask)
+            updateWidgetMetrics(from: summaries, workouts: widgetWorkouts)
             let points = makeWorkoutCaloriesPoints(from: workouts)
             let chartTotal = points.reduce(0) { $0 + $1.kilocalories }
             let chartActiveDays = points.filter { $0.kilocalories > 0 }.count
@@ -363,11 +364,21 @@ final class HealthReporterViewModel: ObservableObject {
         }
     }
 
-    private func updateWidgetMetrics(from summaries: [DailyHealthSummary]) {
-        WidgetMetricsStore.saveDailySummaries(summaries)
+    private func updateWidgetMetrics(from summaries: [DailyHealthSummary], workouts: [HealthWorkout]? = nil) {
+        WidgetMetricsStore.saveDailySummaries(summaries, workouts: workouts)
 #if canImport(WidgetKit)
         WidgetCenter.shared.reloadTimelines(ofKind: DataTrackerWidgetKind.healthSummary)
 #endif
+    }
+
+    private func currentYearElapsedDays() -> Int {
+        let calendar = Calendar.current
+        let today = calendar.startOfDay(for: Date())
+        guard let yearStart = calendar.date(from: calendar.dateComponents([.year], from: today)) else {
+            return 366
+        }
+        let elapsed = calendar.dateComponents([.day], from: yearStart, to: today).day ?? 0
+        return max(1, elapsed + 1)
     }
 
     private func makeWorkoutCaloriesPoints(from workouts: [HealthWorkout]) -> [WorkoutCaloriesPoint] {
