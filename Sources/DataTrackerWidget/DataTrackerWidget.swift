@@ -49,10 +49,12 @@ struct DataTrackerWidgetProvider: TimelineProvider {
 struct DataTrackerWidgetView: View {
     let entry: DataTrackerWidgetEntry
 
+    @Environment(\.displayScale) private var displayScale
+
     private let columns = 28
-    private let dotSize: CGFloat = 2.1
-    private let dotHorizontalSpacing: CGFloat = 3.15
-    private let dotVerticalSpacing: CGFloat = 3.65
+    private let dotPixels: CGFloat = 6
+    private let dotHorizontalGapPixels: CGFloat = 10
+    private let dotVerticalGapPixels: CGFloat = 12
 
     var body: some View {
         VStack(spacing: 15) {
@@ -86,19 +88,24 @@ struct DataTrackerWidgetView: View {
     }
 
     private var dotGrid: some View {
-        LazyVGrid(
-            columns: Array(repeating: GridItem(.fixed(dotSize), spacing: dotHorizontalSpacing), count: columns),
-            alignment: .center,
-            spacing: dotVerticalSpacing
-        ) {
-            ForEach(yearDays, id: \.self) { day in
-                Circle()
-                    .fill(color(for: day))
-                    .frame(width: dotSize, height: dotSize)
-                    .accessibilityHidden(true)
+        Canvas { context, size in
+            let startX = pixelAligned(max(0, (size.width - gridWidth) / 2))
+
+            for (index, day) in yearDays.enumerated() {
+                let row = index / columns
+                let column = index % columns
+                let rect = CGRect(
+                    x: startX + CGFloat(column) * (dotSize + dotHorizontalSpacing),
+                    y: CGFloat(row) * (dotSize + dotVerticalSpacing),
+                    width: dotSize,
+                    height: dotSize
+                )
+                context.fill(Path(ellipseIn: rect), with: .color(color(for: day)))
             }
         }
+        .frame(height: gridHeight)
         .frame(maxWidth: .infinity)
+        .accessibilityHidden(true)
     }
 
     private var workoutDays: Set<String> {
@@ -120,6 +127,30 @@ struct DataTrackerWidgetView: View {
         return (0..<totalDays).compactMap { offset in
             calendar.date(byAdding: .day, value: offset, to: yearStart)
         }
+    }
+
+    private var rowCount: Int {
+        max(1, Int(ceil(Double(yearDays.count) / Double(columns))))
+    }
+
+    private var dotSize: CGFloat {
+        dotPixels / displayScale
+    }
+
+    private var dotHorizontalSpacing: CGFloat {
+        dotHorizontalGapPixels / displayScale
+    }
+
+    private var dotVerticalSpacing: CGFloat {
+        dotVerticalGapPixels / displayScale
+    }
+
+    private var gridWidth: CGFloat {
+        CGFloat(columns) * dotSize + CGFloat(columns - 1) * dotHorizontalSpacing
+    }
+
+    private var gridHeight: CGFloat {
+        CGFloat(rowCount) * dotSize + CGFloat(rowCount - 1) * dotVerticalSpacing
     }
 
     private var year: Int {
@@ -159,6 +190,10 @@ struct DataTrackerWidgetView: View {
         }
 
         return Color(red: 0.95, green: 0.85, blue: 0.75)
+    }
+
+    private func pixelAligned(_ value: CGFloat) -> CGFloat {
+        (value * displayScale).rounded() / displayScale
     }
 }
 
